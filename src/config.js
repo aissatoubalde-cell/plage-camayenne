@@ -15,6 +15,8 @@ export const site = {
     instagram: import.meta.env.VITE_INSTAGRAM_PAGE || "",
     tiktok: import.meta.env.VITE_TIKTOK_PAGE || "",
   },
+  // Numéro qui reçoit les acomptes Orange Money quand CinetPay n’est pas configuré.
+  orangeMoney: import.meta.env.VITE_ORANGE_MONEY_NUMBER || "+224 620 613 554",
   web3formsKey: import.meta.env.VITE_WEB3FORMS_KEY || "",
   plausibleDomain: import.meta.env.VITE_PLAUSIBLE_DOMAIN || "",
   paymentApi: "/api",
