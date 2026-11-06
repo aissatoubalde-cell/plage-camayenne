@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+/* Polices hébergées avec le site (public/fonts), sous-ensemble latin. */
+@font-face {
+  font-family: "Hanken Grotesk";
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url(/fonts/hanken-grotesk-400-800-latin.woff2) format("woff2");
+}
+@font-face {
+  font-family: "Yellowtail";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/yellowtail-latin.woff2) format("woff2");
+}
+
+/* Jetons de design : palette tirée du logo (mer de nuit, sable, soleil, palmier, ciel), typographies, points de rupture. */
+@theme {
+  --color-night: #06181c;
+  --color-night-2: #0a2328;
+  --color-card: #0f2e35;
+  --color-sand: #f4ecdf;
+  --color-sand-soft: #a8bcb8;
+  --color-line: rgb(244 236 223 / 0.13);
+  --color-gold: #f2a33a;
+  --color-gold-deep: #d98a1f;
+  --color-palm: #3db262;
+  --color-sky: #6cc6ea;
+  --color-danger: #e06b5c;
+  --color-whatsapp: #25d366;
+  --font-sans: "Hanken Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-script: "Yellowtail", "Brush Script MT", cursive;
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 760px;
+  --breakpoint-lg: 980px;
+  --spacing-section: clamp(64px, 9vw, 120px);
+  --spacing-gutter: clamp(32px, 5vw, 72px);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+    scroll-padding-top: 80px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; animation: none !important; }
+  }
+  body {
+    @apply bg-night text-sand font-sans text-[16.5px] leading-relaxed;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-[3px] outline-gold;
+  }
+  h1, h2, h3 { @apply text-balance; }
+  summary::-webkit-details-marker { display: none; }
+}

@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /confirmation
+
+Sitemap: https://www.camayenneplage.com/sitemap.xml
