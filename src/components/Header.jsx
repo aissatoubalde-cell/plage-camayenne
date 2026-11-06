@@ -1,7 +1,9 @@
+import { AnimatePresence, m } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { site } from "../config";
 import { navItems } from "../data/content";
+import { ease, fadeUp, stagger } from "./motion";
 import { Button, Eyebrow, Wrap } from "./ui";
 
 export default function Header() {
@@ -57,31 +59,34 @@ export default function Header() {
         </Wrap>
       </header>
 
+      <AnimatePresence>
       {open && (
-        <div id="menu" className="fixed inset-0 z-40 overflow-auto bg-night" style={{ paddingTop: menuTop }}>
+        <m.div key="menu" id="menu" initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25, ease }} className="fixed inset-0 z-40 overflow-auto bg-night" style={{ paddingTop: menuTop }}>
           <Wrap className="grid gap-10 pb-10 md:grid-cols-[1.4fr_1fr]">
-            <nav aria-label="Navigation principale" className="grid border-t border-line">
+            <m.nav variants={stagger(0.1, 0.05)} initial="hidden" animate="show" aria-label="Navigation principale" className="grid border-t border-line">
               {navItems.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  onClick={close}
-                  className="grid grid-cols-[56px_1fr] items-baseline gap-3 border-b border-line py-4 text-[clamp(24px,3.4vw,40px)] leading-[1.1] font-bold tracking-[-0.02em] no-underline hover:text-gold"
-                >
-                  <span className="text-[15px] font-semibold tracking-normal text-gold">{item.n}</span>
-                  {item.label}
-                </Link>
+                <m.div key={item.to} variants={fadeUp}>
+                  <Link
+                    to={item.to}
+                    onClick={close}
+                    className="grid grid-cols-[56px_1fr] items-baseline gap-3 border-b border-line py-4 text-[clamp(24px,3.4vw,40px)] leading-[1.1] font-bold tracking-[-0.02em] no-underline hover:text-gold"
+                  >
+                    <span className="text-[15px] font-semibold tracking-normal text-gold">{item.n}</span>
+                    {item.label}
+                  </Link>
+                </m.div>
               ))}
-            </nav>
-            <aside className="grid content-start gap-3.5 text-sand-soft">
+            </m.nav>
+            <m.aside variants={fadeUp} custom={0.4} initial="hidden" animate="show" className="grid content-start gap-3.5 text-sand-soft">
               <Eyebrow>Contact</Eyebrow>
               <p><b className="text-sand">{site.phone}</b></p>
               <p className="[overflow-wrap:anywhere]">{site.email}</p>
               <p>{site.address}</p>
-            </aside>
+            </m.aside>
           </Wrap>
-        </div>
+        </m.div>
       )}
+      </AnimatePresence>
     </>
   );
 }

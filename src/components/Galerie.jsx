@@ -1,5 +1,7 @@
+import { AnimatePresence, m } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { galerie, galleryFilters } from "../data/content";
+import { ease, fadeUp } from "./motion";
 import { Hl, Picture, SectionHead, Wrap } from "./ui";
 
 const navBtn = "absolute h-12 w-12 cursor-pointer rounded-[2px] border border-line bg-transparent text-xl leading-none font-semibold text-sand";
@@ -42,24 +44,26 @@ export default function Galerie() {
         </div>
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
           {shown.map((g, i) => (
-            <button key={g.photo} type="button" aria-label={`Agrandir : ${g.caption}`} onClick={(e) => { lastFocus.current = e.currentTarget; setCurrent(i); }} className="group aspect-square cursor-zoom-in overflow-hidden border-0 bg-card p-0">
+            <m.button key={g.photo} variants={fadeUp} custom={(i % 4) * 0.07} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} type="button" aria-label={`Agrandir : ${g.caption}`} onClick={(e) => { lastFocus.current = e.currentTarget; setCurrent(i); }} className="group aspect-square cursor-zoom-in overflow-hidden border-0 bg-card p-0">
               <Picture name={g.photo} alt={g.caption} imgClass="h-full w-full object-cover opacity-90 transition-[transform,opacity] duration-500 group-hover:scale-105 group-hover:opacity-100" />
-            </button>
+            </m.button>
           ))}
         </div>
       </Wrap>
 
+      <AnimatePresence>
       {item && (
-        <div role="dialog" aria-modal="true" aria-label="Photo agrandie" onClick={(e) => e.target === e.currentTarget && close()} className="fixed inset-0 z-[100] grid place-items-center bg-[#030E11]/95 px-4 py-[60px]">
+        <m.div key="lightbox" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} role="dialog" aria-modal="true" aria-label="Photo agrandie" onClick={(e) => e.target === e.currentTarget && close()} className="fixed inset-0 z-[100] grid place-items-center bg-[#030E11]/95 px-4 py-[60px]">
           <button ref={closeBtn} type="button" aria-label="Fermer" onClick={close} className={`${navBtn} top-3.5 right-3.5`}>✕</button>
           <button type="button" aria-label="Photo précédente" onClick={() => step(-1)} className={`${navBtn} top-1/2 left-3.5`}>←</button>
-          <figure className="grid max-w-[min(92vw,900px)] justify-items-center gap-3">
+          <m.figure initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.28, ease }} className="grid max-w-[min(92vw,900px)] justify-items-center gap-3">
             <Picture name={item.photo} alt={item.caption} loading="eager" width={item.photo === "hero" ? 960 : 414} height={item.photo === "hero" ? 540 : 414} imgClass="h-auto max-h-[76vh] w-auto max-w-full" />
             <figcaption className="text-sm tracking-[0.06em] text-sand-soft">{item.caption} · {current + 1} / {shown.length}</figcaption>
-          </figure>
+          </m.figure>
           <button type="button" aria-label="Photo suivante" onClick={() => step(1)} className={`${navBtn} top-1/2 right-3.5`}>→</button>
-        </div>
+        </m.div>
       )}
+      </AnimatePresence>
     </section>
   );
 }

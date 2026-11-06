@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Reveal } from "../motion";
 
 /* Petits composants partagés : conteneur, titres, boutons, images, champs. Toutes les classes sont Tailwind. */
 
@@ -18,11 +19,11 @@ export const Hl = ({ children }) => <span className="text-gold">{children}</span
 
 export function SectionHead({ eyebrow, title, lede, as, className = "" }) {
   return (
-    <div className={`mb-[clamp(36px,5vw,60px)] grid gap-[18px] ${className}`}>
+    <Reveal className={`mb-[clamp(36px,5vw,60px)] grid gap-[18px] ${className}`}>
       <Eyebrow>{eyebrow}</Eyebrow>
       <H2 as={as}>{title}</H2>
       {lede ? <p className="max-w-[58ch] text-[clamp(17px,1.6vw,19px)] text-sand-soft">{lede}</p> : null}
-    </div>
+    </Reveal>
   );
 }
 

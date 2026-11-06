@@ -20,7 +20,8 @@ Site de **Camayenne Plage**, complexe de loisirs et d’événementiel en bord d
 | Statistiques | Plausible (sans cookies) | `src/App.jsx` |
 | Images | JPG + WebP, hero en deux tailles, chargement différé | `public/img`, `scripts/images.mjs` |
 | Polices | Hanken Grotesk et Yellowtail hébergées avec le site | `public/fonts`, `src/index.css` |
-| Hébergement | Netlify (site + fonctions), Git + GitHub | `netlify.toml` |
+| Animations | Motion (apparitions au défilement, compteurs, menu, visionneuse, FAQ) | `src/components/motion.jsx` |
+| Hébergement | Vercel (`vercel.json`, fonctions dans `api/`) ou Netlify (`netlify.toml`), Git + GitHub | racine du projet |
 
 ## Ouvrir dans VS Code et démarrer
 
@@ -60,6 +61,8 @@ src/pages/              Home, Paiement, Confirmation, NotFound
 public/img, public/fonts   photos (JPG + WebP), logo, icônes, polices
 netlify/functions/      fonctions de paiement, servies sur /api/<nom>
 netlify/lib/payments.mjs   logique CinetPay, Stripe, validation, enregistrement
+api/                    mêmes fonctions pour Vercel (réutilisent netlify/functions via netlify/lib/node-adapter.mjs)
+src/components/motion.jsx  briques d’animation (Reveal, Stagger, Counter)
 scripts/images.mjs      génération des images
 ```
 
@@ -85,6 +88,7 @@ Copiez `.env.example` en `.env` (jamais versionné). Sur Netlify : *Site configu
 | `CINETPAY_API_KEY`, `CINETPAY_SITE_ID` | Orange Money et MTN Mobile Money | https://cinetpay.com, espace marchand → Intégration |
 | `STRIPE_SECRET_KEY` | paiement par carte | https://dashboard.stripe.com/apikeys (`sk_test_…` pour tester) |
 | `STRIPE_WEBHOOK_SECRET` | confirmation fiable des paiements carte | Stripe → Développeurs → Webhooks → `https://votre-domaine/api/paiement-stripe-webhook`, événement `checkout.session.completed` |
+| `NODEJS_HELPERS` | Vercel uniquement : mettre `0` pour que le webhook Stripe lise le corps brut | à saisir sur Vercel |
 | `STRIPE_CURRENCY` | devise carte | `gnf` par défaut ; `eur` ou `usd` si votre compte Stripe refuse le GNF |
 | `SITE_URL` | URL publique pour les retours de paiement | identique à `VITE_SITE_URL` |
 | `WEB3FORMS_KEY` | e-mail « Acompte reçu » à l’équipe (facultatif) | même clé Web3Forms |
@@ -116,7 +120,13 @@ git remote add origin https://github.com/VOTRE-COMPTE/camayenne-plage.git
 git push -u origin main
 ```
 
-### 2. Netlify (gratuit pour un site vitrine)
+### 2. Vercel (gratuit pour un site vitrine)
+
+1. Sur https://vercel.com/new, importez le dépôt GitHub : Vite est détecté, `vercel.json` gère le routage des pages et les en-têtes, les fonctions de paiement sont dans `api/`.
+2. *Settings → Environment Variables* : ajoutez les variables du tableau ci-dessus (au moins `VITE_SITE_URL` et `SITE_URL` avec l’adresse `https://….vercel.app` ou votre domaine). Ajoutez aussi `NODEJS_HELPERS` = `0` pour que le webhook Stripe reçoive le corps brut de la requête.
+3. Déployez. Chaque `git push` sur `main` met le site à jour. Après un changement de variables, relancez un déploiement (*Deployments → Redeploy*).
+
+### 2 bis. Netlify (alternative)
 
 1. Sur https://app.netlify.com : *Add new site → Import an existing project* → votre dépôt GitHub. Les réglages sont lus dans `netlify.toml` (build `npm run build`, dossier `dist`, fonctions).
 2. Ajoutez les variables d’environnement (tableau ci-dessus).
@@ -124,7 +134,7 @@ git push -u origin main
 
 ### 3. Nom de domaine et HTTPS
 
-Achetez le domaine (OVH, Namecheap, Hostinger…), puis Netlify → *Domain management → Add a domain*. Netlify indique les enregistrements DNS et active le HTTPS automatiquement. Mettez ensuite à jour `VITE_SITE_URL`, `SITE_URL` et le domaine dans `index.html`, `sitemap.xml`, `robots.txt`.
+Achetez le domaine (OVH, Namecheap, Hostinger…), puis Vercel → *Settings → Domains* (ou Netlify → *Domain management*). L’hébergeur indique les enregistrements DNS et active le HTTPS automatiquement. Mettez ensuite à jour `VITE_SITE_URL`, `SITE_URL` et le domaine dans `index.html`, `sitemap.xml`, `robots.txt`.
 
 ### 4. Après la mise en ligne
 

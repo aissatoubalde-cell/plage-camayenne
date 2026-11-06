@@ -1,3 +1,4 @@
+import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
 import { useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
 import Footer from "./components/Footer";
@@ -25,18 +26,20 @@ function Analytics() {
 
 export default function App() {
   return (
-    <>
-      <Header />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/paiement" element={<Paiement />} />
-        <Route path="/confirmation" element={<Confirmation />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-      <Footer />
-      <WhatsAppButton />
-      <ScrollManager />
-      <Analytics />
-    </>
+    <LazyMotion features={domAnimation} strict>
+      <MotionConfig reducedMotion="user">
+        <Header />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/paiement" element={<Paiement />} />
+          <Route path="/confirmation" element={<Confirmation />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <Footer />
+        <WhatsAppButton />
+        <ScrollManager />
+        <Analytics />
+      </MotionConfig>
+    </LazyMotion>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { formules, offres } from "../data/content";
+import { Item, Reveal, Stagger } from "./motion";
 import { Button, Dots, Hl, Photo, SectionHead, Tag, Wrap, h3Cls } from "./ui";
 
 function Formules() {
@@ -40,22 +41,22 @@ export default function Entreprises() {
       <Wrap>
         <SectionHead eyebrow="Entreprises & institutions" title={<>Travailler <Hl>face à la mer</Hl>.</>} lede="Organisation fluide, cadre motivant et résultats concrets : notre engagement pour vos événements professionnels." />
         <div className="grid items-start gap-gutter md:grid-cols-2">
-          <div className="min-w-0">
+          <Stagger className="min-w-0" step={0.06}>
             {offres.map((o) => (
-              <div key={o.title} className="group grid grid-cols-[84px_1fr] items-center gap-[18px] border-b border-line py-[18px] first:border-t sm:grid-cols-[110px_1fr]">
+              <Item key={o.title} className="group grid grid-cols-[84px_1fr] items-center gap-[18px] border-b border-line py-[18px] first:border-t sm:grid-cols-[110px_1fr]">
                 <Photo name={o.photo} alt={o.alt} className="aspect-square" />
                 <div className="grid min-w-0 gap-[5px]">
                   <h3 className={h3Cls}>{o.title}</h3>
                   <p className="text-[15px] text-sand-soft">{o.text}</p>
                 </div>
-              </div>
+              </Item>
             ))}
-          </div>
-          <div className="min-w-0">
+          </Stagger>
+          <Reveal className="min-w-0" delay={0.15}>
             <Formules />
             <p className="mt-4 text-[14.5px] text-sand-soft">Chaque formule fait l’objet d’un devis personnalisé selon le nombre de participants, la durée, les espaces choisis et les prestations complémentaires.</p>
             <Button to="/#devis" className="mt-[18px]">Demander un devis</Button>
-          </div>
+          </Reveal>
         </div>
       </Wrap>
     </section>
