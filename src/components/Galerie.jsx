@@ -2,7 +2,7 @@ import { AnimatePresence, m } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { galerie, galleryFilters } from "../data/content";
 import { ease, fadeUp } from "./motion";
-import { Hl, Picture, SectionHead, Wrap } from "./ui";
+import { Picture, SectionHead, Wrap } from "./ui";
 
 const navBtn = "absolute h-12 w-12 cursor-pointer rounded-[2px] border border-line bg-transparent text-xl leading-none font-semibold text-sand";
 
@@ -34,7 +34,7 @@ export default function Galerie() {
   return (
     <section id="galerie" className="py-section">
       <Wrap>
-        <SectionHead eyebrow="Galerie" title={<>Camayenne Plage <Hl>en images</Hl>.</>} />
+        <SectionHead eyebrow="Galerie" title="Camayenne Plage *en images*." />
         <div role="group" aria-label="Filtrer la galerie" className="mb-5 flex flex-wrap gap-2">
           {galleryFilters.map((f) => (
             <button key={f.key} type="button" aria-pressed={filter === f.key} onClick={() => setFilter(f.key)} className="cursor-pointer rounded-[2px] border border-line px-4 py-3 text-[13px] leading-none font-semibold tracking-[0.06em] uppercase text-sand-soft aria-pressed:border-sand aria-pressed:bg-sand aria-pressed:text-night">

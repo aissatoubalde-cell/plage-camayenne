@@ -9,6 +9,12 @@ export const site = {
   address: "Camayenne, Conakry – Guinée",
   mapQuery: "Camayenne Plage, Dixinn, Conakry, Guinée",
   facebookVideo: import.meta.env.VITE_FACEBOOK_VIDEO || "https://www.facebook.com/share/v/1D1iJD4rRG/",
+  // Pages officielles : les icônes du pied de page n’apparaissent que si l’adresse est renseignée.
+  social: {
+    facebook: import.meta.env.VITE_FACEBOOK_PAGE || "",
+    instagram: import.meta.env.VITE_INSTAGRAM_PAGE || "",
+    tiktok: import.meta.env.VITE_TIKTOK_PAGE || "",
+  },
   web3formsKey: import.meta.env.VITE_WEB3FORMS_KEY || "",
   plausibleDomain: import.meta.env.VITE_PLAUSIBLE_DOMAIN || "",
   paymentApi: "/api",
