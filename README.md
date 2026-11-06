@@ -53,12 +53,12 @@ npm run dev
 ```
 index.html              page d’entrée Vite : balises SEO, Open Graph, Schema.org
 src/main.jsx            démarrage React + React Router
-src/App.jsx             routes : / (accueil), /paiement, /confirmation, 404
+src/App.jsx             routes : / (accueil), /devis, /paiement, /confirmation, 404
 src/index.css           Tailwind, polices locales, jetons de design (@theme), styles de base
 src/config.js           coordonnées, carte, vidéo, clés publiques (lues depuis .env)
 src/data/content.js     textes : espaces, activités, offres, formules, galerie, FAQ, options du formulaire
 src/components/         sections de l’accueil, formulaires, galerie, en-tête, pied de page, ui/ (boutons, champs…)
-src/pages/              Home, Paiement, Confirmation, NotFound
+src/pages/              Home, Devis, Paiement, Confirmation, NotFound
 public/img, public/fonts   photos (JPG + WebP), logo, icônes, polices
 netlify/functions/      fonctions de paiement, servies sur /api/<nom>
 netlify/lib/payments.mjs   logique CinetPay, Stripe, validation, enregistrement

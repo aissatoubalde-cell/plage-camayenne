@@ -7,7 +7,7 @@ import { Icon } from "./ui/icons";
 
 const links = [
   ["Mot du DG", "/#mot-du-dg"], ["Espaces de location", "/#espaces"], ["Espace privé", "/#prive"], ["Activités", "/#activites"],
-  ["Entreprises", "/#entreprises"], ["Galerie", "/#galerie"], ["Infos pratiques", "/#infos"], ["Demander un devis", "/#devis"], ["Payer un acompte", "/paiement"],
+  ["Entreprises", "/#entreprises"], ["Galerie", "/#galerie"], ["Infos pratiques", "/#infos"], ["Demander un devis", "/devis"], ["Payer un acompte", "/paiement"],
 ];
 
 const Heading = ({ children }) => <h4 className="mb-4 text-xs font-semibold tracking-[0.18em] uppercase text-gold">{children}</h4>;
@@ -71,7 +71,7 @@ export default function Footer() {
             <Heading>Réserver</Heading>
             <p className="-mt-2 text-[15px] text-sand-soft">Un séminaire, un anniversaire, une réception ? Parlez-nous de votre projet, nous vous répondons avec un devis personnalisé.</p>
             <div className="grid gap-2.5">
-              <Button to="/#devis" className="w-full px-5 py-[15px]">Demander un devis</Button>
+              <Button to="/devis" className="w-full px-5 py-[15px]">Demander un devis</Button>
               <Button to="/paiement" variant="line" className="w-full px-5 py-[15px]">Payer un acompte</Button>
             </div>
           </div>

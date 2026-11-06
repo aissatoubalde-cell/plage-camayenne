@@ -1,10 +1,15 @@
 import { mapDirectionsUrl, mapEmbedUrl, site, whatsappLink } from "../config";
 import CopyButton from "./CopyButton";
-import DevisForm from "./DevisForm";
 import { Reveal } from "./motion";
 import { ScrollEyebrow, ScrollWords } from "./text";
 import { Button, Wrap } from "./ui";
 import { Icon } from "./ui/icons";
+
+const ctaSteps = [
+  ["send", "Décrivez votre événement", "Formulaire en deux minutes, ou un message WhatsApp."],
+  ["clock", "Réponse sous 48 h", "Une première proposition, puis une visite du site."],
+  ["check", "Devis et acompte", "Vous validez, réglez l’acompte en ligne et votre date est bloquée."],
+];
 
 const facts = [
   ["car", "Parking privé"],
@@ -71,14 +76,32 @@ export default function Infos() {
           </Reveal>
         </div>
 
-        {/* ---- Demande de devis ---- */}
+        {/* ---- Appel à la demande de devis (formulaire complet sur /devis) ---- */}
         <div id="devis" className="min-w-0 scroll-mt-24">
           <Reveal className="mb-8 grid gap-[18px]">
-            <ScrollEyebrow>Demande de devis</ScrollEyebrow>
+            <ScrollEyebrow>Votre projet</ScrollEyebrow>
             <ScrollWords as="h2" text="Parlez-nous *de votre projet*." className="text-[clamp(34px,5vw,58px)] leading-[1.02] font-extrabold tracking-[-0.025em]" />
-            <ScrollWords as="p" mode="dim" text="Quelques questions, deux minutes : notre équipe vous répond avec un devis personnalisé." className="max-w-[52ch] text-[clamp(17px,1.6vw,19px)] text-sand-soft" />
+            <ScrollWords as="p" mode="dim" text="Séminaire, team building, anniversaire ou réception : décrivez votre événement en deux minutes, nous vous répondons avec un devis personnalisé sous 48 h." className="max-w-[52ch] text-[clamp(17px,1.6vw,19px)] text-sand-soft" />
           </Reveal>
-          <Reveal amount={0.05}><DevisForm /></Reveal>
+          <Reveal amount={0.1} className="relative grid gap-6 overflow-hidden rounded-2xl bg-card p-6 shadow-[0_18px_40px_-14px_rgba(0,0,0,.6)] md:p-8">
+            <span aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-gold/0 via-gold to-gold/0" />
+            <ul className="grid gap-4 sm:grid-cols-3">
+              {ctaSteps.map(([icon, t, d]) => (
+                <li key={t} className="grid gap-2">
+                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-night text-gold"><Icon name={icon} className="h-5 w-5" /></span>
+                  <b className="text-[15px]">{t}</b>
+                  <span className="text-[13.5px] text-sand-soft">{d}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="grid gap-3">
+              <Button to="/devis" className="w-full rounded-xl py-[18px]">Demander un devis<Icon name="arrow" className="h-4 w-4" /></Button>
+              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13.5px] text-sand-soft">
+                <a href={whatsappLink("Bonjour Camayenne Plage, je souhaite un devis pour un événement.")} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 no-underline hover:text-sand"><Icon name="whatsapp" className="h-4 w-4" />Écrire sur WhatsApp</a>
+                <a href={`tel:${site.phoneE164}`} className="inline-flex items-center gap-1.5 no-underline hover:text-sand"><Icon name="phone" className="h-4 w-4" />{site.phone}</a>
+              </div>
+            </div>
+          </Reveal>
         </div>
       </Wrap>
     </section>

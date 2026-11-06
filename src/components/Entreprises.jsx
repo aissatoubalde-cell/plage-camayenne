@@ -55,7 +55,7 @@ export default function Entreprises() {
           <Reveal className="min-w-0" delay={0.15}>
             <Formules />
             <p className="mt-4 text-[14.5px] text-sand-soft">Chaque formule fait l’objet d’un devis personnalisé selon le nombre de participants, la durée, les espaces choisis et les prestations complémentaires.</p>
-            <Button to="/#devis" className="mt-[18px]">Demander un devis</Button>
+            <Button to="/devis" className="mt-[18px]">Demander un devis</Button>
           </Reveal>
         </div>
       </Wrap>

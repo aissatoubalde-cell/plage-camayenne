@@ -41,7 +41,7 @@ export default function Hero() {
             </div>
           </m.div>
           <m.div variants={fadeUp} className="flex flex-wrap gap-3">
-            <Button to="/#devis">Organiser un événement</Button>
+            <Button to="/devis">Organiser un événement</Button>
             <Button to="/#video" variant="line">▶ Voir la vidéo</Button>
           </m.div>
           <m.div variants={fadeUp} className="mt-5 flex flex-wrap items-center gap-x-[22px] gap-y-2.5 border-t border-line pt-[22px] text-[12.5px] font-semibold tracking-[0.16em] uppercase text-sand-soft">

@@ -13,7 +13,7 @@ export default function Prive() {
           <ScrollWords as="h2" text="Vos grands moments, *au bord de l’eau*." className="text-[clamp(34px,5vw,58px)] leading-[1.02] font-extrabold tracking-[-0.025em]" />
           <ScrollWords as="p" mode="dim" text="Anniversaires, dîners privés, célébrations familiales, réceptions sur invitation. Nous vous accompagnons dans la préparation." className="max-w-[58ch] text-[clamp(17px,1.6vw,19px)] text-sand-soft" />
           <Dots items={privateItems} />
-          <div><Button to="/#devis">Préparer mon événement</Button></div>
+          <div><Button to="/devis">Préparer mon événement</Button></div>
         </Reveal>
       </Wrap>
     </section>
