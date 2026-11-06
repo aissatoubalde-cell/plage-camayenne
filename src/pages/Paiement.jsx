@@ -25,6 +25,7 @@ export default function Paiement() {
   const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
 
   useEffect(() => {
+    if (site.paymentDemo) { setConf({ cinetpay: true, stripe: true, currency: "GNF", demo: true }); return; }
     fetch(`${site.paymentApi}/paiement-config`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((c) => { const ok = c && (c.cinetpay || c.stripe); setConf(ok ? c : null); if (ok) setMethod(c.cinetpay ? "cinetpay" : "stripe"); })
@@ -37,6 +38,10 @@ export default function Paiement() {
 
   const submit = async (e) => {
     e.preventDefault();
+    if (conf?.demo) {
+      setState({ kind: "demo", text: `Mode démonstration : aucun paiement réel. En production, vous seriez redirigé vers ${method === "stripe" ? "Stripe" : "CinetPay (Orange Money / MTN)"} pour régler ${fmt(amount)} ${currency}.` });
+      return;
+    }
     setState({ kind: "sending" });
     try {
       const res = await fetch(`${site.paymentApi}/paiement-${method}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...f, amount }) });
@@ -83,7 +88,8 @@ export default function Paiement() {
               </Callout>
             )}
             {conf && (
-              <form onSubmit={submit} className="grid gap-[18px] border border-line bg-card p-[clamp(22px,3vw,34px)]">
+              <form onSubmit={submit} className="relative grid gap-[18px] overflow-hidden rounded-2xl bg-card p-[clamp(22px,3vw,34px)] shadow-[0_18px_40px_-14px_rgba(0,0,0,.6)]">
+                {conf.demo && <span className="absolute top-0 right-0 rounded-bl-xl bg-gold px-3 py-1.5 text-[11px] font-bold tracking-[0.14em] uppercase text-night">Démo</span>}
                 <fieldset className="grid gap-[9px] border-0 p-0">
                   <legend className={`${labelCls} mb-[9px]`}>Moyen de paiement</legend>
                   <div className="grid gap-2.5 md:grid-cols-2">
@@ -111,6 +117,7 @@ export default function Paiement() {
                   <input id="p-montant" type="number" inputMode="numeric" required min={min} step={1} placeholder={currency === "GNF" ? `Ex. ${fmt(500000)}` : "Ex. 150"} value={f.amount} onChange={set("amount")} className={`${inputCls} tabular-nums`} />
                 </Field>
                 {state.kind === "err" && <Status kind="err">{state.text}</Status>}
+                {state.kind === "demo" && <Status kind="ok">{state.text}</Status>}
                 <div className="flex flex-wrap gap-2.5">
                   <Button type="submit" disabled={state.kind === "sending"}>{state.kind === "sending" ? "Redirection…" : `Payer ${amount > 0 ? `${fmt(amount)} ${currency}` : "l’acompte"}`}</Button>
                 </div>

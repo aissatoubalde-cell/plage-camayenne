@@ -70,7 +70,8 @@ export default function Header() {
       </div>
 
       <header className="sticky top-0 z-50 border-b border-line bg-night/90 backdrop-blur-[8px]">
-        <Wrap className="flex h-[78px] items-center gap-6 lg:gap-8 xl:gap-10">
+        {/* En-tête plus large que le contenu : le logo et les actions sont repoussés vers les bords */}
+        <div className="mx-auto flex h-[78px] max-w-[1360px] items-center gap-6 px-5 lg:gap-8 xl:gap-10">
           <Brand onClick={close} />
 
           {/* Ordinateur : liens visibles */}
@@ -110,7 +111,7 @@ export default function Header() {
           >
             <i className="block h-0.5 w-5 bg-sand" /><i className="block h-0.5 w-5 bg-sand" /><i className="block h-0.5 w-5 bg-sand" />
           </button>
-        </Wrap>
+        </div>
       </header>
 
       <AnimatePresence>

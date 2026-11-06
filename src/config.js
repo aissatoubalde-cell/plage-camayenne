@@ -18,6 +18,8 @@ export const site = {
   web3formsKey: import.meta.env.VITE_WEB3FORMS_KEY || "",
   plausibleDomain: import.meta.env.VITE_PLAUSIBLE_DOMAIN || "",
   paymentApi: "/api",
+  // VITE_PAYMENT_DEMO=1 : la page Paiement affiche le formulaire complet et simule le paiement, sans clé ni débit.
+  paymentDemo: import.meta.env.VITE_PAYMENT_DEMO === "1",
 };
 
 export const whatsappLink = (text) => `https://wa.me/${site.whatsapp}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
