@@ -1,11 +1,11 @@
-// POST /api/paiement-cinetpay : crée la transaction Orange Money / MTN et renvoie l’URL de paiement CinetPay.
+// POST /api/paiement-cinetpay : crée la transaction Orange Money et renvoie l’URL de paiement CinetPay.
 import { createCinetPayPayment, json, parsePaymentInput, readJson, settings, siteUrl } from "../lib/payments.mjs";
 
 
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Méthode non autorisée." }, 405);
   const s = settings().cinetpay;
-  if (!s.enabled) return json({ error: "Le paiement par Mobile Money n’est pas encore activé." }, 503);
+  if (!s.enabled) return json({ error: "Le paiement par Orange Money n’est pas encore activé." }, 503);
   const parsed = parsePaymentInput(await readJson(req), s.currency);
   if (!parsed.ok) return json({ error: parsed.error }, 400);
   const base = siteUrl(req);

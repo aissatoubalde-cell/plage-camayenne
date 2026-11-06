@@ -41,7 +41,7 @@ export function parsePaymentInput(body, currency) {
 
 export const readJson = (req) => req.json().catch(() => null);
 
-/* ---------- CinetPay (Orange Money, MTN Mobile Money) : https://docs.cinetpay.com ---------- */
+/* ---------- CinetPay (Orange Money) : https://docs.cinetpay.com ---------- */
 export async function createCinetPayPayment(input, urls) {
   const s = settings().cinetpay;
   const transactionId = `CP-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -119,7 +119,7 @@ export async function recordPayment(p) {
   const lines = [
     "Un acompte vient d’être reçu sur le site Camayenne Plage.", "",
     `• Montant : ${formatAmount(p.amount)} ${p.currency}`,
-    `• Moyen : ${p.provider === "cinetpay" ? `Mobile Money (${p.method || "Orange / MTN"})` : "Carte bancaire (Stripe)"}`,
+    `• Moyen : ${p.provider === "cinetpay" ? `Orange Money${p.method ? ` (${p.method})` : ""}` : "Carte bancaire (Stripe)"}`,
     `• Transaction : ${p.transactionId}`,
     p.reference ? `• Référence devis : ${p.reference}` : "",
     p.customer?.name ? `• Client : ${p.customer.name}` : "",
