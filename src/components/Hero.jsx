@@ -1,16 +1,18 @@
 import { m } from "motion/react";
+import { asset } from "../assets";
 import { heroCats, stats } from "../data/content";
 import { Counter, fadeUp, stagger } from "./motion";
-import { Button, Eyebrow, Hl, Wrap } from "./ui";
+import { Eyebrow as AnimatedEyebrow, SplitWords } from "./text";
+import { Button, Wrap } from "./ui";
 
 export default function Hero() {
   return (
     <section id="accueil" className="relative overflow-hidden">
       <picture className="contents">
-        <source type="image/webp" srcSet="/img/photos/hero-640.webp 640w, /img/photos/hero.webp 960w" sizes="100vw" />
+        <source type="image/webp" srcSet={`${asset("img/photos/hero-640.webp")} 640w, ${asset("img/photos/hero.webp")} 960w`} sizes="100vw" />
         <img
-          src="/img/photos/hero.jpg"
-          srcSet="/img/photos/hero-640.jpg 640w, /img/photos/hero.jpg 960w"
+          src={asset("img/photos/hero.jpg")}
+          srcSet={`${asset("img/photos/hero-640.jpg")} 640w, ${asset("img/photos/hero.jpg")} 960w`}
           sizes="100vw"
           width="960"
           height="540"
@@ -23,10 +25,8 @@ export default function Hero() {
       <Wrap className="relative z-10">
         {/* Entrée en cascade au chargement de la page */}
         <m.div variants={stagger(0.15, 0.12)} initial="hidden" animate="show" className="grid gap-7 pt-[clamp(72px,11vw,140px)] pb-[clamp(48px,6vw,72px)]">
-          <m.div variants={fadeUp}><Eyebrow>Plage · Loisirs · Événements · Conakry</Eyebrow></m.div>
-          <m.h1 variants={fadeUp} className="text-[clamp(52px,9vw,112px)] leading-[0.96] font-extrabold tracking-[-0.035em]">
-            Camayenne Plage, <Hl>entre mer</Hl> et nature.
-          </m.h1>
+          <AnimatedEyebrow inView={false} delay={0.1}>Plage · Loisirs · Événements · Conakry</AnimatedEyebrow>
+          <SplitWords as="h1" inView={false} delay={0.35} step={0.1} text="Camayenne Plage, *entre mer* et nature." className="text-[clamp(52px,9vw,112px)] leading-[0.96] font-extrabold tracking-[-0.035em]" />
           <m.div variants={fadeUp} className="grid items-end gap-10 lg:grid-cols-[1fr_auto]">
             <p className="max-w-[46ch] text-[clamp(17px,1.7vw,19px)] text-sand-soft">
               Un complexe de loisirs et d’événementiel en bord de mer. Venez vous détendre en famille, ou organisez votre séminaire, votre team building ou votre réception face à l’océan.

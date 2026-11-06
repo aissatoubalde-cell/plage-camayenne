@@ -1,6 +1,7 @@
 import { AnimatePresence, m } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { asset } from "../assets";
 import { site } from "../config";
 import { navItems } from "../data/content";
 import { ease, fadeUp, stagger } from "./motion";
@@ -33,8 +34,8 @@ export default function Header() {
         <Wrap className="flex h-[74px] items-center gap-[18px]">
           <Link to="/#accueil" onClick={close} className="flex items-center gap-3 no-underline">
             <picture className="contents">
-              <source type="image/webp" srcSet="/img/logo.webp" />
-              <img src="/img/logo.jpg" alt="Logo Camayenne Plage" width="46" height="46" className="h-[46px] w-[46px] rounded-full bg-white object-contain" />
+              <source type="image/webp" srcSet={asset("img/logo.webp")} />
+              <img src={asset("img/logo.jpg")} alt="Logo Camayenne Plage" width="46" height="46" className="h-[46px] w-[46px] rounded-full bg-white object-contain" />
             </picture>
             <b className="text-lg leading-none font-extrabold tracking-[-0.01em]">
               Camayenne Plage
