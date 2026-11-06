@@ -74,7 +74,7 @@ export default function Header() {
           <Brand onClick={close} />
 
           {/* Ordinateur : liens visibles */}
-          <nav aria-label="Navigation principale" className="hidden flex-1 items-center justify-center gap-5 lg:flex xl:gap-9">
+          <nav aria-label="Navigation principale" className="hidden flex-1 items-center justify-center gap-5 lg:ml-8 lg:flex xl:ml-14 xl:gap-9">
             {navDesktop.map((item) => (
               <Link
                 key={item.id}
