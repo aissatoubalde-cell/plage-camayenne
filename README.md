@@ -14,7 +14,7 @@ Site de **Camayenne Plage**, complexe de loisirs et d’événementiel en bord d
 | Bouton WhatsApp flottant | lien `wa.me` avec message pré-rempli | `src/components/WhatsAppButton.jsx` |
 | Carte | Google Maps intégrée (sans clé) + lien itinéraire | `src/components/Infos.jsx`, `src/config.js` |
 | Vidéo | lecteur Facebook chargé au clic | `src/components/Video.jsx` |
-| Paiement Orange Money / MTN MoMo | CinetPay | `netlify/functions/paiement-cinetpay*.mjs` |
+| Paiement Orange Money | CinetPay | `netlify/functions/paiement-cinetpay*.mjs` |
 | Paiement par carte | Stripe Checkout + webhook | `netlify/functions/paiement-stripe*.mjs` |
 | SEO | balises Open Graph, `sitemap.xml`, `robots.txt`, Schema.org LocalBusiness | `index.html`, `public/` |
 | Statistiques | Plausible (sans cookies) | `src/App.jsx` |
@@ -85,7 +85,7 @@ Copiez `.env.example` en `.env` (jamais versionné). Sur Netlify : *Site configu
 | `VITE_WEB3FORMS_KEY` | envoi du formulaire de devis par e-mail | https://web3forms.com (gratuit), clé créée avec `camayenneplagejpc224@gmail.com`. Sans clé, le bouton ouvre la messagerie du visiteur. |
 | `VITE_PLAUSIBLE_DOMAIN` | statistiques sans cookies | https://plausible.io, ex. `camayenneplage.com` |
 | `VITE_FACEBOOK_VIDEO` | vidéo du lecteur intégré | adresse de la vidéo Facebook |
-| `CINETPAY_API_KEY`, `CINETPAY_SITE_ID` | Orange Money et MTN Mobile Money | https://cinetpay.com, espace marchand → Intégration |
+| `CINETPAY_API_KEY`, `CINETPAY_SITE_ID` | Orange Money | https://cinetpay.com, espace marchand → Intégration |
 | `STRIPE_SECRET_KEY` | paiement par carte | https://dashboard.stripe.com/apikeys (`sk_test_…` pour tester) |
 | `STRIPE_WEBHOOK_SECRET` | confirmation fiable des paiements carte | Stripe → Développeurs → Webhooks → `https://votre-domaine/api/paiement-stripe-webhook`, événement `checkout.session.completed` |
 | `NODEJS_HELPERS` | Vercel uniquement : mettre `0` pour que le webhook Stripe lise le corps brut | à saisir sur Vercel |
@@ -99,7 +99,7 @@ Tant que les clés de paiement sont vides, la page `/paiement` affiche « Le pai
 
 Page `/paiement` : le client saisit nom, e-mail, référence du devis et montant, puis choisit le moyen.
 
-1. **Orange Money / MTN MoMo** : `POST /api/paiement-cinetpay` crée la transaction et redirige vers CinetPay. CinetPay prévient `/api/paiement-cinetpay-notify` ; la fonction **revérifie** la transaction auprès de CinetPay avant de l’enregistrer. Le client revient sur `/confirmation`.
+1. **Orange Money** : `POST /api/paiement-cinetpay` crée la transaction et redirige vers CinetPay. CinetPay prévient `/api/paiement-cinetpay-notify` ; la fonction **revérifie** la transaction auprès de CinetPay avant de l’enregistrer. Le client revient sur `/confirmation`.
 2. **Carte bancaire** : `POST /api/paiement-stripe` crée une session Stripe Checkout. Le webhook `/api/paiement-stripe-webhook` confirme le paiement.
 
 Chaque paiement confirmé est journalisé (Netlify → Logs → Functions) et, si `WEB3FORMS_KEY` est renseignée, un e-mail « Acompte reçu » part à l’équipe (`netlify/lib/payments.mjs`, fonction `recordPayment`, où brancher une base de données plus tard).
