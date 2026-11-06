@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { site, whatsappLink } from "../config";
 import { Button, Field, Status, Wrap, inputCls, labelCls } from "../components/ui";
 import CopyButton from "../components/CopyButton";
+
+const CardCheckout = lazy(() => import("../components/CardCheckout"));
 import { useTitle } from "../hooks";
 import { Eyebrow as AnimatedEyebrow, SplitWords } from "../components/text";
 
@@ -37,6 +39,8 @@ export default function Paiement() {
   const amount = Number(f.amount);
   // Sans CinetPay, Orange Money reste actif en mode manuel : transfert vers notre numéro puis confirmation WhatsApp.
   const manual = method === "cinetpay" && conf && !conf.cinetpay;
+  // Carte : avec la clé publiable Stripe, le formulaire de carte s’affiche dans la page au lieu d’une redirection.
+  const embeddedCard = method === "stripe" && Boolean(conf?.stripeKey);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -56,8 +60,9 @@ export default function Paiement() {
     }
     setState({ kind: "sending" });
     try {
-      const res = await fetch(`${site.paymentApi}/paiement-${method}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...f, amount }) });
+      const res = await fetch(`${site.paymentApi}/paiement-${method}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...f, amount, embedded: embeddedCard }) });
       const json = await res.json().catch(() => ({}));
+      if (res.ok && embeddedCard && json.clientSecret) { setState({ kind: "card", clientSecret: json.clientSecret }); return; }
       if (!res.ok || !json.url) throw new Error(json.error || "Paiement indisponible pour le moment.");
       window.location.assign(json.url);
     } catch (err) {
@@ -88,7 +93,23 @@ export default function Paiement() {
           <div className="min-w-0">
             {state.kind === "cancel" && <Status kind="err" className="mb-3.5">Paiement annulé. Vous pouvez réessayer quand vous le souhaitez.</Status>}
             {conf === undefined && <p className="text-sand-soft">Chargement…</p>}
-            {conf && (
+            {conf && state.kind === "card" && (
+              <div className="grid gap-[18px] border border-line bg-card p-[clamp(22px,3vw,34px)]">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="grid gap-1">
+                    <span className={labelCls}>Paiement par carte</span>
+                    <b className="text-[20px] tabular-nums">{fmt(amount)} {currency}</b>
+                    <small className="text-[13px] text-sand-soft">{f.name}{f.reference ? ` · Devis ${f.reference}` : ""}</small>
+                  </div>
+                  <Button type="button" variant="line" onClick={() => setState({ kind: "idle" })}>Modifier</Button>
+                </div>
+                <Suspense fallback={<p className="text-sand-soft">Chargement du formulaire de carte…</p>}>
+                  <CardCheckout publishableKey={conf.stripeKey} clientSecret={state.clientSecret} />
+                </Suspense>
+                <p className="text-[13.5px] text-sand-soft">Saisie sécurisée par Stripe : vos données de carte ne transitent pas par notre site. Un reçu vous est envoyé par e-mail.</p>
+              </div>
+            )}
+            {conf && state.kind !== "card" && (
               <form onSubmit={submit} className="grid gap-[18px] border border-line bg-card p-[clamp(22px,3vw,34px)]">
                 <fieldset className="grid gap-[9px] border-0 p-0">
                   <legend className={`${labelCls} mb-[9px]`}>Moyen de paiement</legend>
@@ -135,9 +156,9 @@ export default function Paiement() {
                 {state.kind === "manual-sent" && <Status kind="ok">Merci ! Envoyez le message WhatsApp qui vient de s’ouvrir avec la capture du SMS Orange Money. Notre équipe vous confirme la réservation.</Status>}
                 {state.kind === "err" && <Status kind="err">{state.text}</Status>}
                 <div className="flex flex-wrap gap-2.5">
-                  <Button type="submit" disabled={state.kind === "sending"}>{manual ? "Confirmer sur WhatsApp" : state.kind === "sending" ? "Redirection…" : `Payer ${amount > 0 ? `${fmt(amount)} ${currency}` : "l’acompte"}`}</Button>
+                  <Button type="submit" disabled={state.kind === "sending"}>{manual ? "Confirmer sur WhatsApp" : state.kind === "sending" ? "Chargement…" : embeddedCard ? "Saisir ma carte" : `Payer ${amount > 0 ? `${fmt(amount)} ${currency}` : "l’acompte"}`}</Button>
                 </div>
-                {!manual && <p className="text-[13.5px] text-sand-soft">Vous êtes redirigé vers la page de paiement sécurisée du prestataire. Aucune donnée bancaire ne transite par notre site. Un reçu vous est envoyé par e-mail.</p>}
+                {!manual && !embeddedCard && <p className="text-[13.5px] text-sand-soft">Vous êtes redirigé vers la page de paiement sécurisée du prestataire. Aucune donnée bancaire ne transite par notre site. Un reçu vous est envoyé par e-mail.</p>}
               </form>
             )}
           </div>

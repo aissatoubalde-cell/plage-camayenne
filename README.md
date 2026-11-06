@@ -89,6 +89,7 @@ Copiez `.env.example` en `.env` (jamais versionné). Sur Netlify : *Site configu
 | `VITE_FACEBOOK_PAGE`, `VITE_INSTAGRAM_PAGE`, `VITE_TIKTOK_PAGE` | icônes des réseaux dans le pied de page | adresses des pages officielles (icône masquée si vide) |
 | `CINETPAY_API_KEY`, `CINETPAY_SITE_ID` | Orange Money | https://cinetpay.com, espace marchand → Intégration |
 | `STRIPE_SECRET_KEY` | paiement par carte | https://dashboard.stripe.com/apikeys (`sk_test_…` pour tester) |
+| `STRIPE_PUBLISHABLE_KEY` | formulaire de carte affiché dans la page (sinon redirection vers Stripe) | même page, clé `pk_live_…` (`pk_test_…` pour tester) |
 | `STRIPE_WEBHOOK_SECRET` | confirmation fiable des paiements carte | Stripe → Développeurs → Webhooks → `https://votre-domaine/api/paiement-stripe-webhook`, événement `checkout.session.completed` |
 | `NODEJS_HELPERS` | Vercel uniquement : mettre `0` pour que le webhook Stripe lise le corps brut | à saisir sur Vercel |
 | `STRIPE_CURRENCY` | devise carte | `gnf` par défaut ; `eur` ou `usd` si votre compte Stripe refuse le GNF |

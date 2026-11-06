@@ -8,7 +8,7 @@ export function settings() {
   const env = process.env;
   return {
     cinetpay: { apiKey: env.CINETPAY_API_KEY || "", siteId: env.CINETPAY_SITE_ID || "", currency: "GNF", enabled: Boolean(env.CINETPAY_API_KEY && env.CINETPAY_SITE_ID) },
-    stripe: { secretKey: env.STRIPE_SECRET_KEY || "", webhookSecret: env.STRIPE_WEBHOOK_SECRET || "", currency: (env.STRIPE_CURRENCY || "gnf").toLowerCase(), enabled: Boolean(env.STRIPE_SECRET_KEY) },
+    stripe: { secretKey: env.STRIPE_SECRET_KEY || "", publishableKey: env.STRIPE_PUBLISHABLE_KEY || "", webhookSecret: env.STRIPE_WEBHOOK_SECRET || "", currency: (env.STRIPE_CURRENCY || "gnf").toLowerCase(), enabled: Boolean(env.STRIPE_SECRET_KEY) },
     web3formsKey: env.WEB3FORMS_KEY || "",
   };
 }
@@ -92,17 +92,21 @@ export function getStripe() {
   return (stripeClient ??= new Stripe(s.secretKey));
 }
 
-export async function createStripeCheckout(input, urls) {
+/** Session Stripe Checkout. `embedded` : formulaire de carte affiché dans notre page (renvoie clientSecret), sinon redirection (renvoie url). */
+export async function createStripeCheckout(input, urls, { embedded = false } = {}) {
   const currency = settings().stripe.currency;
   const session = await getStripe().checkout.sessions.create({
     mode: "payment",
+    ...(embedded ? { ui_mode: "embedded_page", return_url: urls.successUrl } : { success_url: urls.successUrl, cancel_url: urls.cancelUrl }),
     customer_email: input.email,
     line_items: [{ quantity: 1, price_data: { currency, unit_amount: toMinorUnits(input.amount, currency), product_data: { name: "Acompte – Camayenne Plage", description: input.reference ? `Référence du devis : ${input.reference}` : "Acompte de réservation" } } }],
     metadata: { name: input.name, phone: input.phone, reference: input.reference },
-    success_url: urls.successUrl,
-    cancel_url: urls.cancelUrl,
     locale: "fr",
   });
+  if (embedded) {
+    if (!session.client_secret) throw new Error("Stripe n’a pas renvoyé de client_secret.");
+    return { sessionId: session.id, clientSecret: session.client_secret };
+  }
   if (!session.url) throw new Error("Stripe n’a pas renvoyé d’URL de paiement.");
   return { sessionId: session.id, url: session.url };
 }
