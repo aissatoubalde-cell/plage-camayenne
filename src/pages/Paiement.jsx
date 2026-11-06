@@ -10,7 +10,7 @@ const methodCls = "grid cursor-pointer grid-cols-[auto_1fr] items-center gap-x-3
 
 const steps = [
   ["Devis validé", "Vous avez reçu votre devis et confirmé la réservation avec notre équipe."],
-  ["Acompte", "Vous réglez le montant indiqué sur le devis, par Orange Money, MTN Mobile Money ou carte bancaire."],
+  ["Acompte", "Vous réglez le montant indiqué sur le devis, par Orange Money ou carte bancaire."],
   ["Confirmation", "Vous recevez un reçu par e-mail et notre équipe vous confirme la réservation."],
 ];
 
@@ -55,7 +55,7 @@ export default function Paiement() {
             <div className="mb-[clamp(36px,5vw,60px)] grid gap-[18px]">
               <Eyebrow>Paiement en ligne</Eyebrow>
               <H2 as="h1">Payer <Hl>un acompte</Hl>.</H2>
-              <p className="max-w-[58ch] text-[clamp(17px,1.6vw,19px)] text-sand-soft">Votre devis est validé ? Réglez l’acompte en quelques minutes, par Mobile Money ou par carte, et votre date est bloquée.</p>
+              <p className="max-w-[58ch] text-[clamp(17px,1.6vw,19px)] text-sand-soft">Votre devis est validé ? Réglez l’acompte en quelques minutes, par Orange Money ou par carte, et votre date est bloquée.</p>
             </div>
             <ol className="border-t border-line">
               {steps.map(([t, d], i) => (
@@ -88,7 +88,7 @@ export default function Paiement() {
                   <div className="grid gap-2.5 md:grid-cols-2">
                     <label className={methodCls}>
                       <input type="radio" name="method" value="cinetpay" checked={method === "cinetpay"} disabled={!conf.cinetpay} onChange={() => setMethod("cinetpay")} className="row-span-2 accent-gold" />
-                      <b className="text-[15px]">Orange Money / MTN MoMo</b>
+                      <b className="text-[15px]">Orange Money</b>
                       <small className="text-[13px] text-sand-soft">{conf.cinetpay ? "Paiement sécurisé via CinetPay" : "Bientôt disponible"}</small>
                     </label>
                     <label className={methodCls}>
@@ -103,7 +103,7 @@ export default function Paiement() {
                   <Field id="p-email" label="E-mail"><input id="p-email" type="email" autoComplete="email" required value={f.email} onChange={set("email")} className={inputCls} /></Field>
                 </div>
                 <div className="grid gap-3.5 md:grid-cols-2">
-                  <Field id="p-tel" label="Téléphone"><input id="p-tel" type="tel" autoComplete="tel" placeholder="Numéro Mobile Money si possible" value={f.phone} onChange={set("phone")} className={inputCls} /></Field>
+                  <Field id="p-tel" label="Téléphone"><input id="p-tel" type="tel" autoComplete="tel" placeholder="Numéro Orange Money si possible" value={f.phone} onChange={set("phone")} className={inputCls} /></Field>
                   <Field id="p-ref" label="Référence du devis"><input id="p-ref" placeholder="Indiquée sur votre devis" value={f.reference} onChange={set("reference")} className={inputCls} /></Field>
                 </div>
                 <Field id="p-montant" label={`Montant de l’acompte (${currency})`} hint={`Montant indiqué sur votre devis validé${currency === "GNF" ? ` (minimum ${fmt(MIN_GNF)} GNF)` : ""}.`}>

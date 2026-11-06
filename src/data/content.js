@@ -97,7 +97,7 @@ export const faq = [
   { q: "Proposez-vous la restauration ?", a: "Oui, sur demande : pause-café et rafraîchissements, cocktail dînatoire, déjeuner professionnel, dîner de gala, avec des menus adaptés à votre budget." },
   { q: "Peut-on visiter avant de réserver ?", a: "Oui, la visite du site fait partie de notre démarche de réservation. Elle permet de choisir les espaces les mieux adaptés." },
   { q: "Comment se passe une réservation ?", a: "Prise de contact, identification de vos besoins, visite du site, proposition commerciale et devis, validation de la réservation, préparation de l’événement, puis accueil et accompagnement le jour J." },
-  { q: "Peut-on payer un acompte en ligne ?", a: "Oui. Une fois votre devis validé, vous pouvez régler l’acompte par Orange Money, MTN Mobile Money ou carte bancaire depuis la page « Payer un acompte »." },
+  { q: "Peut-on payer un acompte en ligne ?", a: "Oui. Une fois votre devis validé, vous pouvez régler l’acompte par Orange Money ou carte bancaire depuis la page « Payer un acompte »." },
   { q: "Y a-t-il un parking ?", a: "Oui, le site dispose d’un parking privé et d’un environnement sécurisé." },
 ];
 
