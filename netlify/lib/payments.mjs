@@ -92,23 +92,33 @@ export function getStripe() {
   return (stripeClient ??= new Stripe(s.secretKey));
 }
 
-/** Session Stripe Checkout. `embedded` : formulaire de carte affiché dans notre page (renvoie clientSecret), sinon redirection (renvoie url). */
-export async function createStripeCheckout(input, urls, { embedded = false } = {}) {
+export async function createStripeCheckout(input, urls) {
   const currency = settings().stripe.currency;
   const session = await getStripe().checkout.sessions.create({
     mode: "payment",
-    ...(embedded ? { ui_mode: "embedded_page", return_url: urls.successUrl } : { success_url: urls.successUrl, cancel_url: urls.cancelUrl }),
+    success_url: urls.successUrl,
+    cancel_url: urls.cancelUrl,
     customer_email: input.email,
     line_items: [{ quantity: 1, price_data: { currency, unit_amount: toMinorUnits(input.amount, currency), product_data: { name: "Acompte – Camayenne Plage", description: input.reference ? `Référence du devis : ${input.reference}` : "Acompte de réservation" } } }],
     metadata: { name: input.name, phone: input.phone, reference: input.reference },
     locale: "fr",
   });
-  if (embedded) {
-    if (!session.client_secret) throw new Error("Stripe n’a pas renvoyé de client_secret.");
-    return { sessionId: session.id, clientSecret: session.client_secret };
-  }
   if (!session.url) throw new Error("Stripe n’a pas renvoyé d’URL de paiement.");
   return { sessionId: session.id, url: session.url };
+}
+
+/** PaymentIntent pour le formulaire de carte intégré à la page (Stripe Payment Element). Renvoie le client_secret. */
+export async function createStripeIntent(input) {
+  const currency = settings().stripe.currency;
+  const intent = await getStripe().paymentIntents.create({
+    amount: toMinorUnits(input.amount, currency),
+    currency,
+    automatic_payment_methods: { enabled: true },
+    receipt_email: input.email,
+    description: input.reference ? `Acompte – Camayenne Plage (devis ${input.reference})` : "Acompte – Camayenne Plage",
+    metadata: { name: input.name, email: input.email, phone: input.phone, reference: input.reference },
+  });
+  return { id: intent.id, clientSecret: intent.client_secret };
 }
 
 /* ---------- Enregistrement ---------- */

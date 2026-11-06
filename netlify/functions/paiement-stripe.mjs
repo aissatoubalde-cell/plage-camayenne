@@ -1,6 +1,7 @@
-// POST /api/paiement-stripe : crée une session Stripe Checkout.
-// Avec { embedded: true } et STRIPE_PUBLISHABLE_KEY : renvoie { clientSecret } (formulaire de carte intégré à la page), sinon { url } (redirection).
-import { createStripeCheckout, json, parsePaymentInput, readJson, settings, siteUrl } from "../lib/payments.mjs";
+// POST /api/paiement-stripe : paiement par carte.
+// Avec { intent: true } et STRIPE_PUBLISHABLE_KEY : crée un PaymentIntent et renvoie { clientSecret } (champs de carte dans la page).
+// Sinon : crée une session Stripe Checkout et renvoie { url } (redirection vers Stripe).
+import { createStripeCheckout, createStripeIntent, json, parsePaymentInput, readJson, settings, siteUrl } from "../lib/payments.mjs";
 
 
 export default async (req) => {
@@ -12,9 +13,12 @@ export default async (req) => {
   if (!parsed.ok) return json({ error: parsed.error }, 400);
   const base = siteUrl(req);
   try {
-    const embedded = Boolean(body?.embedded && s.publishableKey);
-    const r = await createStripeCheckout(parsed.data, { successUrl: `${base}/confirmation?provider=stripe&session_id={CHECKOUT_SESSION_ID}`, cancelUrl: `${base}/paiement?annule=1` }, { embedded });
-    return json(embedded ? { clientSecret: r.clientSecret } : { url: r.url });
+    if (body?.intent && s.publishableKey) {
+      const { clientSecret } = await createStripeIntent(parsed.data);
+      return json({ clientSecret });
+    }
+    const { url } = await createStripeCheckout(parsed.data, { successUrl: `${base}/confirmation?provider=stripe&session_id={CHECKOUT_SESSION_ID}`, cancelUrl: `${base}/paiement?annule=1` });
+    return json({ url });
   } catch (e) {
     console.error("[stripe] création impossible", e);
     return json({ error: "Impossible de démarrer le paiement pour le moment. Réessayez ou contactez-nous." }, 502);
