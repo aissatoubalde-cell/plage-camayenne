@@ -96,7 +96,7 @@ Copiez `.env.example` en `.env` (jamais versionné). Sur Netlify : *Site configu
 | `SITE_URL` | URL publique pour les retours de paiement | identique à `VITE_SITE_URL` |
 | `WEB3FORMS_KEY` | e-mail « Acompte reçu » à l’équipe (facultatif) | même clé Web3Forms |
 
-Tant que les clés de paiement sont vides, la page `/paiement` affiche « Le paiement en ligne arrive » avec les boutons WhatsApp et Appeler.
+Tant que les clés de paiement sont vides, la page `/paiement` affiche « Le paiement en ligne arrive » avec les boutons WhatsApp et Appeler. Pour voir et tester le formulaire sans clé (maquette, démonstration), mettez `VITE_PAYMENT_DEMO=1` dans `.env` : le paiement est simulé, rien n’est débité. À retirer en production.
 
 ## Paiement d’un acompte
 
