@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { formules, offres } from "../data/content";
 import { Item, Reveal, Stagger } from "./motion";
-import { Button, Dots, Hl, Photo, SectionHead, Tag, Wrap, h3Cls } from "./ui";
+import { Button, Dots, Photo, SectionHead, Tag, Wrap, h3Cls } from "./ui";
 
 function Formules() {
   const [active, setActive] = useState(0);
@@ -39,7 +39,7 @@ export default function Entreprises() {
   return (
     <section id="entreprises" className="py-section">
       <Wrap>
-        <SectionHead eyebrow="Entreprises & institutions" title={<>Travailler <Hl>face à la mer</Hl>.</>} lede="Organisation fluide, cadre motivant et résultats concrets : notre engagement pour vos événements professionnels." />
+        <SectionHead eyebrow="Entreprises & institutions" title="Travailler *face à la mer*." lede="Organisation fluide, cadre motivant et résultats concrets : notre engagement pour vos événements professionnels." />
         <div className="grid items-start gap-gutter md:grid-cols-2">
           <Stagger className="min-w-0" step={0.06}>
             {offres.map((o) => (
@@ -55,7 +55,7 @@ export default function Entreprises() {
           <Reveal className="min-w-0" delay={0.15}>
             <Formules />
             <p className="mt-4 text-[14.5px] text-sand-soft">Chaque formule fait l’objet d’un devis personnalisé selon le nombre de participants, la durée, les espaces choisis et les prestations complémentaires.</p>
-            <Button to="/#devis" className="mt-[18px]">Demander un devis</Button>
+            <Button to="/devis" className="mt-[18px]">Demander un devis</Button>
           </Reveal>
         </div>
       </Wrap>

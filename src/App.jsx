@@ -7,6 +7,7 @@ import WhatsAppButton from "./components/WhatsAppButton";
 import { site } from "./config";
 import { useScrollToHash } from "./hooks";
 import Confirmation from "./pages/Confirmation";
+import Devis from "./pages/Devis";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import Paiement from "./pages/Paiement";
@@ -31,6 +32,7 @@ export default function App() {
         <Header />
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/devis" element={<Devis />} />
           <Route path="/paiement" element={<Paiement />} />
           <Route path="/confirmation" element={<Confirmation />} />
           <Route path="*" element={<NotFound />} />

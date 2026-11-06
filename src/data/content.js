@@ -1,15 +1,24 @@
 // Contenu des sections. Les clés `photo` correspondent aux fichiers public/img/photos/<photo>.jpg (+ .webp).
 
-export const navItems = [
-  { n: "01", label: "Mot du DG", to: "/#mot-du-dg" },
-  { n: "02", label: "Espaces de location", to: "/#espaces" },
-  { n: "03", label: "Espace privé", to: "/#prive" },
-  { n: "04", label: "Activités", to: "/#activites" },
-  { n: "05", label: "Entreprises", to: "/#entreprises" },
-  { n: "06", label: "Galerie", to: "/#galerie" },
-  { n: "07", label: "Infos pratiques", to: "/#infos" },
-  { n: "08", label: "Demander un devis", to: "/#devis" },
-  { n: "09", label: "Payer un acompte", to: "/paiement" },
+// Navigation de l’en-tête (ordinateur) : les sections principales de l’accueil
+export const navDesktop = [
+  { label: "Espaces", to: "/#espaces", id: "espaces" },
+  { label: "Activités", to: "/#activites", id: "activites" },
+  { label: "Entreprises", to: "/#entreprises", id: "entreprises" },
+  { label: "Galerie", to: "/#galerie", id: "galerie" },
+  { label: "Infos pratiques", to: "/#infos", id: "infos" },
+];
+// Panneau mobile : « Découvrir » puis « Organiser un événement »
+export const navDiscover = [
+  { label: "Mot du DG", to: "/#mot-du-dg" },
+  { label: "Espaces de location", to: "/#espaces" },
+  { label: "Activités", to: "/#activites" },
+  { label: "Galerie", to: "/#galerie" },
+  { label: "Infos pratiques", to: "/#infos" },
+];
+export const navOrganize = [
+  { label: "Entreprises & institutions", to: "/#entreprises", icon: "briefcase" },
+  { label: "Espace privé & familles", to: "/#prive", icon: "sparkles" },
 ];
 
 export const stats = [

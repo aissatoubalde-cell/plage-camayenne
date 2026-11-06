@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
+import { asset } from "../../assets";
 import { Reveal } from "../motion";
+import { ScrollEyebrow, ScrollWords } from "../text";
 
 /* Petits composants partagés : conteneur, titres, boutons, images, champs. Toutes les classes sont Tailwind. */
 
@@ -20,9 +22,13 @@ export const Hl = ({ children }) => <span className="text-gold">{children}</span
 export function SectionHead({ eyebrow, title, lede, as, className = "" }) {
   return (
     <Reveal className={`mb-[clamp(36px,5vw,60px)] grid gap-[18px] ${className}`}>
-      <Eyebrow>{eyebrow}</Eyebrow>
-      <H2 as={as}>{title}</H2>
-      {lede ? <p className="max-w-[58ch] text-[clamp(17px,1.6vw,19px)] text-sand-soft">{lede}</p> : null}
+      <ScrollEyebrow>{eyebrow}</ScrollEyebrow>
+      {typeof title === "string" ? (
+        <ScrollWords as={as || "h2"} text={title} className="text-[clamp(34px,5vw,58px)] leading-[1.02] font-extrabold tracking-[-0.025em]" />
+      ) : (
+        <H2 as={as}>{title}</H2>
+      )}
+      {lede ? <ScrollWords as="p" mode="dim" text={lede} className="max-w-[58ch] text-[clamp(17px,1.6vw,19px)] text-sand-soft" /> : null}
     </Reveal>
   );
 }
@@ -45,8 +51,8 @@ export function Button({ variant = "gold", to, href, className = "", ...props })
 export function Picture({ name, alt = "", className = "contents", imgClass = "", loading = "lazy", style, width = 414, height = 414, fetchPriority }) {
   return (
     <picture className={className}>
-      <source type="image/webp" srcSet={`/img/photos/${name}.webp`} />
-      <img src={`/img/photos/${name}.jpg`} alt={alt} width={width} height={height} loading={loading} className={imgClass} style={style} fetchPriority={fetchPriority} />
+      <source type="image/webp" srcSet={asset(`img/photos/${name}.webp`)} />
+      <img src={asset(`img/photos/${name}.jpg`)} alt={alt} width={width} height={height} loading={loading} className={imgClass} style={style} fetchPriority={fetchPriority} />
     </picture>
   );
 }

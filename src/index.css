@@ -8,13 +8,6 @@
   font-display: swap;
   src: url(/fonts/hanken-grotesk-400-800-latin.woff2) format("woff2");
 }
-@font-face {
-  font-family: "Yellowtail";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url(/fonts/yellowtail-latin.woff2) format("woff2");
-}
 
 /* Jetons de design : palette tirée du logo (mer de nuit, sable, soleil, palmier, ciel), typographies, points de rupture. */
 @theme {
@@ -31,7 +24,6 @@
   --color-danger: #e06b5c;
   --color-whatsapp: #25d366;
   --font-sans: "Hanken Grotesk", "Helvetica Neue", Arial, sans-serif;
-  --font-script: "Yellowtail", "Brush Script MT", cursive;
   --breakpoint-sm: 480px;
   --breakpoint-md: 760px;
   --breakpoint-lg: 980px;

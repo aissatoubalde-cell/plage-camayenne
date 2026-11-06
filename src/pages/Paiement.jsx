@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { site, whatsappLink } from "../config";
-import { Button, Callout, Eyebrow, Field, H2, Hl, Status, Wrap, inputCls, labelCls } from "../components/ui";
+import { Button, Callout, Eyebrow, Field, Status, Wrap, inputCls, labelCls } from "../components/ui";
 import { useTitle } from "../hooks";
+import { Eyebrow as AnimatedEyebrow, SplitWords } from "../components/text";
 
 const fmt = (n) => new Intl.NumberFormat("fr-FR").format(n);
 const MIN_GNF = 50000;
@@ -53,8 +54,8 @@ export default function Paiement() {
         <Wrap className="grid items-start gap-gutter md:grid-cols-[1fr_1.25fr]">
           <div className="min-w-0">
             <div className="mb-[clamp(36px,5vw,60px)] grid gap-[18px]">
-              <Eyebrow>Paiement en ligne</Eyebrow>
-              <H2 as="h1">Payer <Hl>un acompte</Hl>.</H2>
+              <AnimatedEyebrow inView={false}>Paiement en ligne</AnimatedEyebrow>
+              <SplitWords as="h1" inView={false} delay={0.2} text="Payer *un acompte*." className="text-[clamp(34px,5vw,58px)] leading-[1.02] font-extrabold tracking-[-0.025em]" />
               <p className="max-w-[58ch] text-[clamp(17px,1.6vw,19px)] text-sand-soft">Votre devis est validé ? Réglez l’acompte en quelques minutes, par Orange Money ou par carte, et votre date est bloquée.</p>
             </div>
             <ol className="border-t border-line">

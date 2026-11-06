@@ -19,8 +19,8 @@ Site de **Camayenne Plage**, complexe de loisirs et d’événementiel en bord d
 | SEO | balises Open Graph, `sitemap.xml`, `robots.txt`, Schema.org LocalBusiness | `index.html`, `public/` |
 | Statistiques | Plausible (sans cookies) | `src/App.jsx` |
 | Images | JPG + WebP, hero en deux tailles, chargement différé | `public/img`, `scripts/images.mjs` |
-| Polices | Hanken Grotesk et Yellowtail hébergées avec le site | `public/fonts`, `src/index.css` |
-| Animations | Motion (apparitions au défilement, compteurs, menu, visionneuse, FAQ) | `src/components/motion.jsx` |
+| Polices | Hanken Grotesk hébergée avec le site | `public/fonts`, `src/index.css` |
+| Animations | Motion : apparitions, compteurs, menu, visionneuse, FAQ ; textes révélés au rythme du défilement | `src/components/motion.jsx`, `src/components/text.jsx` |
 | Hébergement | Vercel (`vercel.json`, fonctions dans `api/`) ou Netlify (`netlify.toml`), Git + GitHub | racine du projet |
 
 ## Ouvrir dans VS Code et démarrer
@@ -46,18 +46,19 @@ npm run dev
 | `npm run build` | Compilation de production dans `dist/` |
 | `npm run preview` | Aperçu de la version compilée sur http://localhost:4173 |
 | `npm run images` | Régénère les WebP, le hero mobile et les icônes après ajout de photos |
+| `VITE_ROUTER=hash npx vite build --base ./ --outDir dist-preview` | Version « aperçu » hébergeable sous un sous-chemin (routes par hachage) |
 
 ## Structure
 
 ```
 index.html              page d’entrée Vite : balises SEO, Open Graph, Schema.org
 src/main.jsx            démarrage React + React Router
-src/App.jsx             routes : / (accueil), /paiement, /confirmation, 404
+src/App.jsx             routes : / (accueil), /devis, /paiement, /confirmation, 404
 src/index.css           Tailwind, polices locales, jetons de design (@theme), styles de base
 src/config.js           coordonnées, carte, vidéo, clés publiques (lues depuis .env)
 src/data/content.js     textes : espaces, activités, offres, formules, galerie, FAQ, options du formulaire
 src/components/         sections de l’accueil, formulaires, galerie, en-tête, pied de page, ui/ (boutons, champs…)
-src/pages/              Home, Paiement, Confirmation, NotFound
+src/pages/              Home, Devis, Paiement, Confirmation, NotFound
 public/img, public/fonts   photos (JPG + WebP), logo, icônes, polices
 netlify/functions/      fonctions de paiement, servies sur /api/<nom>
 netlify/lib/payments.mjs   logique CinetPay, Stripe, validation, enregistrement
@@ -85,6 +86,7 @@ Copiez `.env.example` en `.env` (jamais versionné). Sur Netlify : *Site configu
 | `VITE_WEB3FORMS_KEY` | envoi du formulaire de devis par e-mail | https://web3forms.com (gratuit), clé créée avec `camayenneplagejpc224@gmail.com`. Sans clé, le bouton ouvre la messagerie du visiteur. |
 | `VITE_PLAUSIBLE_DOMAIN` | statistiques sans cookies | https://plausible.io, ex. `camayenneplage.com` |
 | `VITE_FACEBOOK_VIDEO` | vidéo du lecteur intégré | adresse de la vidéo Facebook |
+| `VITE_FACEBOOK_PAGE`, `VITE_INSTAGRAM_PAGE`, `VITE_TIKTOK_PAGE` | icônes des réseaux dans le pied de page | adresses des pages officielles (icône masquée si vide) |
 | `CINETPAY_API_KEY`, `CINETPAY_SITE_ID` | Orange Money | https://cinetpay.com, espace marchand → Intégration |
 | `STRIPE_SECRET_KEY` | paiement par carte | https://dashboard.stripe.com/apikeys (`sk_test_…` pour tester) |
 | `STRIPE_WEBHOOK_SECRET` | confirmation fiable des paiements carte | Stripe → Développeurs → Webhooks → `https://votre-domaine/api/paiement-stripe-webhook`, événement `checkout.session.completed` |
