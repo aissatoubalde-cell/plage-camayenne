@@ -1,8 +1,12 @@
-import { AnimatePresence, m } from "motion/react";
+import { AnimatePresence, m, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { galerie, galleryFilters } from "../data/content";
-import { ease, fadeUp } from "./motion";
+import { ease } from "./motion";
 import { Picture, SectionHead, Wrap } from "./ui";
+
+// Bande déroulante : 4 s par photo ; la liste est répétée jusqu’à 8 photos minimum pour remplir la largeur.
+const SEC_PER_PHOTO = 4;
+const MIN_BAND = 8;
 
 const navBtn = "absolute h-12 w-12 cursor-pointer rounded-[2px] border border-line bg-transparent text-xl leading-none font-semibold text-sand";
 
@@ -13,6 +17,10 @@ export default function Galerie() {
   const closeBtn = useRef(null);
   const shown = useMemo(() => (filter === "all" ? galerie : galerie.filter((g) => g.cat === filter)), [filter]);
   const isOpen = current !== null;
+  const reduce = useReducedMotion(); // mouvement réduit : rangée fixe que l’on fait défiler soi-même
+  const [held, setHeld] = useState(false); // doigt posé sur la bande (mobile) : pause
+  // Une copie complète, répétée si la catégorie a peu de photos ; le rendu la double pour boucler sans à-coup.
+  const band = useMemo(() => { let seq = []; while (seq.length < MIN_BAND) seq = seq.concat(shown); return seq; }, [shown]);
 
   const close = useCallback(() => { setCurrent(null); lastFocus.current?.focus(); }, []);
   const step = useCallback((d) => setCurrent((c) => (c === null ? c : (c + d + shown.length) % shown.length)), [shown.length]);
@@ -42,13 +50,28 @@ export default function Galerie() {
             </button>
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-          {shown.map((g, i) => (
-            <m.button key={g.photo} variants={fadeUp} custom={(i % 4) * 0.07} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} type="button" aria-label={`Agrandir : ${g.caption}`} onClick={(e) => { lastFocus.current = e.currentTarget; setCurrent(i); }} className="group aspect-square cursor-zoom-in overflow-hidden border-0 bg-card p-0">
-              <Picture name={g.photo} alt={g.caption} imgClass="h-full w-full object-cover opacity-90 transition-[transform,opacity] duration-500 group-hover:scale-105 group-hover:opacity-100" />
-            </m.button>
-          ))}
-        </div>
+        {/* Bande déroulante filtrée : défile seule, se fige au survol, au focus clavier ou sous le doigt ; fondu au changement de filtre. */}
+        <AnimatePresence mode="wait" initial={false}>
+          <m.div key={filter} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
+            onPointerDown={() => setHeld(true)} onPointerUp={() => setHeld(false)} onPointerCancel={() => setHeld(false)}
+            className={`group/bande relative -mx-4 px-4 ${reduce ? "overflow-x-auto" : "overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_6%,#000_94%,transparent)]"}`}>
+            <ul className={`m-0 flex w-max list-none gap-3 p-0 py-2 ${reduce ? "" : "animate-defile group-hover/bande:[animation-play-state:paused] group-focus-within/bande:[animation-play-state:paused]"}`}
+              style={reduce ? undefined : { animationDuration: `${band.length * SEC_PER_PHOTO}s`, animationPlayState: held ? "paused" : undefined }}>
+              {(reduce ? shown : band.concat(band)).map((g, k) => {
+                const dup = k >= shown.length; // répétitions : hors du parcours clavier et des lecteurs d’écran
+                return (
+                  <li key={`${g.photo}-${k}`} className="flex-none" aria-hidden={dup || undefined}>
+                    <button type="button" tabIndex={dup ? -1 : 0} aria-label={`Agrandir : ${g.caption}`} onClick={(e) => { lastFocus.current = e.currentTarget; setCurrent(shown.indexOf(g)); }}
+                      className="group relative block aspect-[4/3] w-[min(300px,66vw)] cursor-zoom-in overflow-hidden rounded-2xl border-0 bg-card p-0 shadow-[0_14px_30px_-14px_rgba(0,0,0,.6)]">
+                      <Picture name={g.photo} alt={g.caption} imgClass="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-night/85 to-night/0 px-3 pt-7 pb-2.5 text-left text-[12.5px] font-semibold text-sand">{g.caption}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </m.div>
+        </AnimatePresence>
       </Wrap>
 
       <AnimatePresence>
