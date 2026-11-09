@@ -23,6 +23,12 @@
   --color-sky: #6cc6ea;
   --color-danger: #e06b5c;
   --color-whatsapp: #25d366;
+  /* Bande déroulante de la galerie : la piste contient deux copies des photos, on la décale d’une moitié puis on boucle. */
+  --animate-defile: defile 40s linear infinite;
+  @keyframes defile {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
   --font-sans: "Hanken Grotesk", "Helvetica Neue", Arial, sans-serif;
   --breakpoint-sm: 480px;
   --breakpoint-md: 760px;
