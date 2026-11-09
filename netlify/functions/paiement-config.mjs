@@ -3,6 +3,6 @@ import { json, settings } from "../lib/payments.mjs";
 
 
 export default async () => {
-  const s = settings();
-  return json({ cinetpay: s.cinetpay.enabled, stripe: s.stripe.enabled, stripeKey: s.stripe.enabled ? s.stripe.publishableKey : "", currency: s.stripe.currency.toUpperCase() });
+  const s = settings().cinetpay;
+  return json({ cinetpay: s.enabled, card: s.card, currency: s.currency });
 };

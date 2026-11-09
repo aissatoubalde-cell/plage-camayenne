@@ -16,7 +16,7 @@ const T = {
 export default function Confirmation() {
   useTitle("Confirmation de paiement · Camayenne Plage");
   const [params] = useSearchParams();
-  const provider = params.get("provider"), id = params.get("session_id") || params.get("payment_intent") || params.get("transaction_id");
+  const provider = params.get("provider"), id = params.get("transaction_id");
   const [r, setR] = useState({ status: "loading" });
 
   useEffect(() => {
