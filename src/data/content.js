@@ -176,6 +176,8 @@ export const galerie = [
   { photo: "sport", caption: "Beach-volley", cat: "famille" },
   { photo: "basket", caption: "Basketball", cat: "famille" },
   { photo: "g3", caption: "Baby-foot", cat: "famille" },
+  { photo: "affiche-kids-land", caption: "Simandou Kids Land : votre week-end en famille commence ici", cat: "famille" },
+  { photo: "affiche-toboggans", caption: "Jeux gonflables et toboggans : le plaisir de bouger et de jouer", cat: "famille" },
 ];
 
 export const faq = [
