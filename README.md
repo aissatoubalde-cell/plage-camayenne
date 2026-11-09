@@ -11,6 +11,7 @@ Site de **Camayenne Plage**, complexe de loisirs et d’événementiel en bord d
 | Structure | React 19 + Vite 7, React Router | `src/` |
 | Styles | Tailwind CSS 4 (jetons de couleurs et polices dans `@theme`) | `src/index.css`, classes dans les composants |
 | Formulaire de devis | Web3Forms (e-mail sans serveur), repli `mailto:` | `src/components/DevisForm.jsx` |
+| Tableau de bord des demandes | Google Sheets privé alimenté par Apps Script (`VITE_SHEET_URL`) | `tableau-de-bord/` (mode d’emploi dans `LISEZMOI.md`) |
 | Bouton WhatsApp flottant | lien `wa.me` avec message pré-rempli | `src/components/WhatsAppButton.jsx` |
 | Carte | Google Maps intégrée (sans clé) + lien itinéraire | `src/components/Infos.jsx`, `src/config.js` |
 | Vidéo | lecteur Facebook chargé au clic | `src/components/Video.jsx` |

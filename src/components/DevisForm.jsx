@@ -104,6 +104,15 @@ export default function DevisForm() {
     if (!hasKey) { window.location.href = mailto; return; }
     if (e.currentTarget.elements.botcheck.checked) return;
     setStatus({ kind: "sending" });
+    // Copie de la demande dans la feuille de suivi Google, en parallèle de l’e-mail : un échec ici ne bloque jamais le visiteur.
+    // « no-cors » et text/plain : seule façon d’écrire vers Apps Script depuis le navigateur, la réponse n’est pas lisible.
+    if (site.sheetUrl) {
+      fetch(site.sheetUrl, {
+        method: "POST", mode: "no-cors", keepalive: true,
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ nom: f.nom.trim(), org: f.org.trim(), email: f.email.trim(), tel: f.tel.trim(), type: f.type, date: f.date, nb: f.nb.trim(), duree: f.duree, espaces: f.espaces, services: f.services, msg: f.msg.trim() }),
+      }).catch(() => {});
+    }
     try {
       const res = await fetch("https://api.web3forms.com/submit", {
         method: "POST",
