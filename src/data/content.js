@@ -64,9 +64,8 @@ export const espaces = [
       ["plage-panier", "Le terrain de basketball de la plage"],
     ],
     text: "Beach-volley, basketball et autres loisirs collectifs." },
-  { n: "05", photo: "lounge", alt: "Espace lounge", title: "Espace lounge",
+  { n: "05", photo: "lounge-buffet", alt: "Espace lounge", title: "Espace lounge",
     photos: [
-      ["lounge", "Espace lounge"],
       ["lounge-buffet", "Buffet dressé avec plateaux et fleurs blanches"],
       ["lounge-cocktail", "Buffet cocktail de viennoiseries et mini-burgers"],
       ["lounge-diner", "Dîner entre invités sous un kiosque, le soir"],
