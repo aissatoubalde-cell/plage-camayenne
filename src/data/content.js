@@ -76,6 +76,10 @@ export const espaces = [
       ["enfants-gonflable", "Une enfant joue devant la structure gonflable"],
       ["enfants-sourire", "Une enfant sourit au milieu du groupe"],
       ["enfants-groupe", "Un groupe d’enfants lors d’une journée à la plage"],
+      ["g2", "Enfants sur le mur d’escalade gonflable"],
+      ["gonflables", "Enfants dans la structure gonflable avec toboggan et piscine"],
+      ["g5", "Goûter des enfants"],
+      ["enfants", "L’aire de jeux avec toboggans et balançoires"],
     ], text: "Aire de jeux avec toboggans et balançoires, pensée pour les familles." },
 ];
 
@@ -132,11 +136,7 @@ export const galerie = [
   { photo: "teambuilding", caption: "Team building sur la plage", cat: "famille" },
   { photo: "sport", caption: "Beach-volley", cat: "famille" },
   { photo: "basket", caption: "Basketball", cat: "famille" },
-  { photo: "gonflables", caption: "Structures gonflables", cat: "famille" },
-  { photo: "g2", caption: "Mur d’escalade", cat: "famille" },
-  { photo: "enfants", caption: "Aire de jeux", cat: "famille" },
   { photo: "g3", caption: "Baby-foot", cat: "famille" },
-  { photo: "g5", caption: "Goûter des enfants", cat: "famille" },
 ];
 
 export const faq = [
