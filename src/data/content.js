@@ -32,7 +32,13 @@ export const heroCats = ["Plage", "Loisirs", "Séminaires", "Team building", "R�
 
 export const espaces = [
   { n: "01", photo: "salle", alt: "Salle de conférence", title: "Salle de conférence", text: "Climatisée, mobilier de conférence, vidéoprojecteur et sonorisation. Réunions, formations, séminaires." },
-  { n: "02", photo: "exterieur", alt: "Espaces extérieurs", title: "Espaces extérieurs", text: "Réceptions, cocktails et événements en plein air, à l’ombre des paillotes et des palmiers." },
+  { n: "02", photo: "exterieur", alt: "Espaces extérieurs", title: "Espaces extérieurs",
+    photos: [
+      ["exterieur", "Espaces extérieurs"],
+      ["exterieur-paillotes", "Paillotes et tables sur le sable, sous les palmiers"],
+      ["exterieur-tables", "Tables sous les paillotes aux couleurs nationales"],
+      ["exterieur-diner", "Table dressée pour un dîner"],
+    ], text: "Réceptions, cocktails et événements en plein air, à l’ombre des paillotes et des palmiers." },
   { n: "03", photo: "plage-vue", alt: "Espace plage", title: "Espace plage",
     photos: [
       ["plage-vue", "Vue aérienne de la plage et des terrains"],
