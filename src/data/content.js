@@ -63,9 +63,8 @@ export const espaces = [
       ["plage-terrain", "Voile tricolore au-dessus du terrain"],
       ["plage-lumieres", "Guirlande lumineuse en soirée"],
     ], text: "Le sable et la mer pour la détente et les événements au bord de l’eau." },
-  { n: "04", photo: "sport", alt: "Terrain de beach-volley", title: "Terrains de sport",
+  { n: "04", photo: "sport-equipes", alt: "Terrains de sport", title: "Terrains de sport",
     photos: [
-      ["sport", "Match de beach-volley sur le sable"],
       ["sport-equipes", "Deux équipes de beach soccer avant un match"],
       ["sport-basket", "Terrain de basketball et buvette"],
       ["sport-panier", "Panier de basketball vu d’en dessous"],
@@ -121,7 +120,7 @@ export const espaces = [
 
 export const activites = [
   { photo: "g2", alt: "Mur d’escalade gonflable", title: "Pour les enfants", text: "Structures gonflables avec toboggans et piscine, mur d’escalade, aire de jeux." },
-  { photo: "basket", alt: "Basketball", title: "Sport", text: "Beach-volley sur le sable, basketball et jeux collectifs." },
+  { photo: "sport", alt: "Match de beach-volley sur le sable", title: "Sport", text: "Beach-volley sur le sable, basketball et jeux collectifs." },
   { photo: "resto", alt: "Restauration le soir", title: "Restauration", text: "Un point de restauration sur la plage, ouvert jusqu’en soirée." },
   { photo: "securite", alt: "Agent de sécurité", title: "Sécurité & propreté", text: "Agents de sécurité et équipes d’entretien de la plage.", position: "center 20%" },
 ];
