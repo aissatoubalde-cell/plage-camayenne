@@ -1,12 +1,23 @@
 // Logique partagée des fonctions de paiement (Netlify Functions). Les clés viennent des variables d’environnement.
-// Orange Money et carte bancaire passent tous deux par CinetPay : une seule intégration, un seul jeu de clés.
-const CINETPAY_API = "https://api-checkout.cinetpay.com/v2";
+// Paiement en ligne via l’API CinetPay v1 (2026) : connexion par clé API (sk_live_… ou sk_test_…) et mot de passe API,
+// puis page de paiement hébergée par CinetPay (Orange Money, MTN Mobile Money ; carte bancaire si le compte le permet).
+// Référence : SDK officiel cinetpay-js (https://www.npmjs.com/package/cinetpay-js), support@cinetpay.com.
+const CINETPAY_PROD = "https://api.cinetpay.co";
+const CINETPAY_SANDBOX = "https://api.cinetpay.net";
 export const CURRENCY = "GNF";
 
 export function settings() {
   const env = process.env;
+  const apiKey = env.CINETPAY_API_KEY || "", apiPassword = env.CINETPAY_API_PASSWORD || "";
+  const enabled = Boolean(apiKey && apiPassword);
   return {
-    cinetpay: { apiKey: env.CINETPAY_API_KEY || "", siteId: env.CINETPAY_SITE_ID || "", currency: CURRENCY, enabled: Boolean(env.CINETPAY_API_KEY && env.CINETPAY_SITE_ID) },
+    cinetpay: {
+      apiKey, apiPassword, currency: CURRENCY, enabled,
+      // sk_test_… → bac à sable, sk_live_… → production ; CINETPAY_API_URL permet de forcer l’adresse.
+      baseUrl: (env.CINETPAY_API_URL || (apiKey.startsWith("sk_test_") ? CINETPAY_SANDBOX : CINETPAY_PROD)).replace(/\/$/, ""),
+      // La carte bancaire n’est proposée que si CinetPay l’a activée sur le compte : CINETPAY_CARD=1 pour l’afficher.
+      card: enabled && env.CINETPAY_CARD === "1",
+    },
     web3formsKey: env.WEB3FORMS_KEY || "",
   };
 }
@@ -22,82 +33,105 @@ export const amountBounds = () => ({ min: 50_000, max: 500_000_000 });
 
 const str = (v, max) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
-/** Canaux CinetPay : Orange Money (Mobile Money) ou carte bancaire. */
-export const CHANNELS = { mobile: "MOBILE_MONEY", card: "CREDIT_CARD" };
+/** Numéro au format international exigé par CinetPay (+224XXXXXXXXX) ; "" si impossible. */
+export function normalizePhone(v) {
+  let d = String(v || "").replace(/[^\d+]/g, "");
+  if (d.startsWith("00")) d = `+${d.slice(2)}`;
+  if (!d.startsWith("+")) d = d.length === 9 ? `+224${d}` : d.length >= 11 ? `+${d}` : "";
+  return /^\+\d{8,15}$/.test(d) ? d : "";
+}
 
 /** Valide le corps JSON du formulaire de paiement. */
 export function parsePaymentInput(body) {
   const b = body && typeof body === "object" ? body : {};
   const channel = b.channel === "card" ? "card" : "mobile";
-  const name = str(b.name, 80), email = str(b.email, 120), phone = str(b.phone, 30).replace(/[^\d+ ]/g, ""), reference = str(b.reference, 40);
-  const city = str(b.city, 60), country = str(b.country, 2).toUpperCase();
+  const name = str(b.name, 80), email = str(b.email, 120), phone = normalizePhone(str(b.phone, 30)), reference = str(b.reference, 40);
   const amount = Number(b.amount);
   if (name.length < 2) return { ok: false, error: "Indiquez votre nom." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: "Indiquez un e-mail valide." };
   if (!Number.isInteger(amount)) return { ok: false, error: "Le montant doit être un nombre entier." };
-  if (amount % 5 !== 0) return { ok: false, error: "Le montant doit être un multiple de 5 GNF." };
   const { min, max } = amountBounds();
   if (amount < min || amount > max) return { ok: false, error: `Le montant doit être compris entre ${formatAmount(min)} et ${formatAmount(max)} ${CURRENCY}.` };
-  if (channel === "card") {
-    // La banque exige ces informations pour sécuriser un paiement par carte (sinon CinetPay refuse la transaction).
-    if (phone.replace(/\D/g, "").length < 8) return { ok: false, error: "Indiquez votre numéro de téléphone : il est demandé pour le paiement par carte." };
-    if (city.length < 2) return { ok: false, error: "Indiquez votre ville : elle est demandée pour le paiement par carte." };
-    if (!/^[A-Z]{2}$/.test(country)) return { ok: false, error: "Indiquez votre pays." };
-  }
-  return { ok: true, data: { channel, name, email, phone, reference, amount, city, country } };
+  if (channel === "card" && !settings().cinetpay.card) return { ok: false, error: "Le paiement par carte n’est pas encore activé." };
+  return { ok: true, data: { channel, name, email, phone, reference, amount } };
 }
 
 export const readJson = (req) => req.json().catch(() => null);
 
-/* ---------- CinetPay (Orange Money et carte bancaire) : https://docs.cinetpay.com ---------- */
+/* ---------- Appels à l’API CinetPay v1 ---------- */
+let tokenCache = { token: "", until: 0 };
+
+async function api(method, path, body, token) {
+  const s = settings().cinetpay;
+  const headers = { Accept: "application/json", "Content-Type": "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${s.baseUrl}${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  return { http: res.status, data };
+}
+
+/** Jeton d’accès (JWT) obtenu avec la clé et le mot de passe API, mis en cache 50 minutes. */
+export async function getCinetPayToken(force = false) {
+  const s = settings().cinetpay;
+  if (!force && tokenCache.token && tokenCache.until > Date.now()) return tokenCache.token;
+  const { data } = await api("POST", "/v1/oauth/login", { api_key: s.apiKey, api_password: s.apiPassword });
+  if (!data.access_token) throw new Error(`CinetPay : connexion refusée (${data.status || "?"} – ${data.description || "pas de jeton"})`);
+  tokenCache = { token: data.access_token, until: Date.now() + 50 * 60 * 1000 };
+  return data.access_token;
+}
+
+/** Appel authentifié, avec une seconde tentative si le jeton a expiré (code 1003 / EXPIRED_TOKEN). */
+async function authed(method, path, body) {
+  let r = await api(method, path, body, await getCinetPayToken());
+  if (r.http === 401 || r.data?.code === 1003 || r.data?.status === "EXPIRED_TOKEN") r = await api(method, path, body, await getCinetPayToken(true));
+  return r;
+}
+
+/** Crée la transaction et renvoie l’URL de la page de paiement CinetPay. `urls.base` = origine publique du site. */
 export async function createCinetPayPayment(input, urls) {
   const s = settings().cinetpay;
-  const transactionId = `CP-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-  const [first, ...rest] = input.name.split(/\s+/);
-  const address = input.city
-    ? { customer_address: input.city, customer_city: input.city, customer_country: input.country || "GN", customer_state: input.city, customer_zip_code: "00000" }
-    : {};
-  const res = await fetch(`${CINETPAY_API}/payment`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      apikey: s.apiKey, site_id: s.siteId, transaction_id: transactionId, amount: input.amount, currency: s.currency,
-      description: `Acompte Camayenne Plage${input.reference ? ` – réf. ${input.reference}` : ""}`,
-      customer_name: first, customer_surname: rest.join(" ") || first, customer_email: input.email, customer_phone_number: input.phone,
-      ...address,
-      notify_url: urls.notifyUrl, return_url: urls.returnUrl, channels: CHANNELS[input.channel] || CHANNELS.mobile, lang: "fr", metadata: input.reference,
-    }),
-  });
-  const j = await res.json();
-  if (j.code !== "201" || !j.data?.payment_url) throw new Error(`CinetPay : ${j.description || j.message || `réponse inattendue (${res.status})`}`);
-  return { transactionId, url: j.data.payment_url };
+  // Identifiant marchand (30 caractères max) : il sert aussi de référence sur la page de confirmation.
+  const transactionId = `CAM-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const parts = input.name.split(/\s+/).filter(Boolean);
+  let first = parts[0] || input.name, last = parts.slice(1).join(" ") || first;
+  if (first.length < 2) first = input.name;
+  if (last.length < 2) last = first;
+  const body = {
+    currency: s.currency, merchant_transaction_id: transactionId, amount: input.amount, lang: "fr",
+    designation: `Acompte Camayenne Plage${input.reference ? ` – réf. ${input.reference}` : ""}`.slice(0, 255),
+    client_email: input.email, client_first_name: first.slice(0, 255), client_last_name: last.slice(0, 255),
+    success_url: `${urls.base}/api/paiement-cinetpay-retour?ref=${transactionId}&issue=ok`,
+    failed_url: `${urls.base}/api/paiement-cinetpay-retour?ref=${transactionId}&issue=ko`,
+    // Le montant voyage dans l’URL de notification : la notification CinetPay ne le contient pas et nous n’avons pas de base de données.
+    notify_url: `${urls.base}/api/paiement-cinetpay-notify?ref=${transactionId}&amount=${input.amount}`,
+    channel: "PUSH", // page hébergée : le client choisit son opérateur sur la page CinetPay
+  };
+  if (input.phone) body.client_phone_number = input.phone;
+  const { http, data } = await authed("POST", "/v1/payment", body);
+  if (!data.payment_url) throw new Error(`CinetPay : ${data.description || data.status || `réponse inattendue (HTTP ${http})`}`);
+  return { transactionId, cinetpayId: data.transaction_id, url: data.payment_url };
 }
 
-/** Vérifie l’état réel d’une transaction auprès de CinetPay (seule source fiable). */
-export async function checkCinetPayPayment(transactionId) {
-  const s = settings().cinetpay;
-  const res = await fetch(`${CINETPAY_API}/payment/check`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ apikey: s.apiKey, site_id: s.siteId, transaction_id: transactionId }),
-  });
-  const j = await res.json();
-  const raw = String(j.data?.status || "").toUpperCase();
-  const status = raw === "ACCEPTED" || j.code === "00" ? "ACCEPTED" : raw === "REFUSED" ? "REFUSED" : "PENDING";
-  return { status, amount: j.data?.amount !== undefined ? Number(j.data.amount) : undefined, currency: j.data?.currency, method: j.data?.payment_method, reference: j.data?.metadata };
+/** État réel d’une transaction auprès de CinetPay (seule source fiable). `id` = notre identifiant marchand ou l’identifiant CinetPay. */
+export async function checkCinetPayPayment(id) {
+  const { data } = await authed("GET", `/v1/payment/${encodeURIComponent(id)}`);
+  const raw = String(data.status || "").toUpperCase();
+  const status = raw === "SUCCESS" ? "paid" : ["FAILED", "EXPIRED", "INSUFFICIENT_BALANCE"].includes(raw) ? "failed" : raw === "NOT_FOUND" || data.code === 404 ? "unknown" : "pending";
+  return { status, raw, merchantId: data.merchant_transaction_id, cinetpayId: data.transaction_id, user: data.user || {} };
 }
 
-/** Identifiant de transaction envoyé par CinetPay (JSON ou formulaire). */
+/** Identifiant de transaction reçu de CinetPay (notification JSON ou retour client), sinon notre référence dans l’URL. */
 export async function readTransactionId(req) {
+  const u = new URL(req.url);
+  const fromQuery = u.searchParams.get("ref") || u.searchParams.get("transaction_id") || u.searchParams.get("merchant_transaction_id");
+  if (req.method !== "POST") return fromQuery;
   const ct = req.headers.get("content-type") || "";
-  if (ct.includes("application/json")) { const j = (await req.json().catch(() => ({}))) || {}; return j.cpm_trans_id || j.transaction_id || null; }
-  const fd = await req.formData().catch(() => null);
-  const v = fd?.get("cpm_trans_id") ?? fd?.get("transaction_id");
-  return typeof v === "string" && v ? v : null;
+  let b = null;
+  if (ct.includes("application/json")) b = (await req.json().catch(() => null)) || null;
+  else { const fd = await req.formData().catch(() => null); if (fd) b = Object.fromEntries(fd.entries()); }
+  const v = b?.transaction_id || b?.merchant_transaction_id || b?.payment_token;
+  return (typeof v === "string" && v) || fromQuery;
 }
-
-/** Libellé lisible du moyen de paiement renvoyé par CinetPay (ex. OM, VISAM, MASTERCARD). */
-const methodLabel = (m) => (/VISA|MASTER|CARD|CB/i.test(m || "") ? "Carte bancaire" : "Orange Money") + (m ? ` (${m})` : "");
 
 /* ---------- Enregistrement ---------- */
 /**
@@ -110,18 +144,17 @@ export async function recordPayment(p) {
   if (!key || p.status !== "paid") return;
   const lines = [
     "Un acompte vient d’être reçu sur le site Camayenne Plage.", "",
-    `• Montant : ${formatAmount(p.amount)} ${p.currency}`,
-    `• Moyen : ${methodLabel(p.method)} via CinetPay`,
-    `• Transaction : ${p.transactionId}`,
-    p.reference ? `• Référence devis : ${p.reference}` : "",
+    p.amount ? `• Montant : ${formatAmount(p.amount)} ${p.currency}` : "• Montant : à vérifier dans l’espace marchand CinetPay",
+    "• Moyen : paiement en ligne via CinetPay",
+    `• Référence : ${p.transactionId}${p.cinetpayId ? ` (CinetPay ${p.cinetpayId})` : ""}`,
     p.customer?.name ? `• Client : ${p.customer.name}` : "",
     p.customer?.email ? `• E-mail : ${p.customer.email}` : "",
-    p.customer?.phone ? `• Téléphone : ${p.customer.phone}` : "",
+    p.customer?.phone_number ? `• Téléphone : ${p.customer.phone_number}` : "",
   ].filter(Boolean);
   try {
     await fetch("https://api.web3forms.com/submit", {
       method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ access_key: key, subject: `Acompte reçu – ${formatAmount(p.amount)} ${p.currency}`, from_name: "Site Camayenne Plage", message: lines.join("\n") }),
+      body: JSON.stringify({ access_key: key, subject: `Acompte reçu${p.amount ? ` – ${formatAmount(p.amount)} ${p.currency}` : ""}`, from_name: "Site Camayenne Plage", message: lines.join("\n") }),
     });
   } catch (e) { console.error("[paiement] notification e-mail impossible", e); }
 }

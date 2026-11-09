@@ -14,7 +14,7 @@ Site de **Camayenne Plage**, complexe de loisirs et d’événementiel en bord d
 | Bouton WhatsApp flottant | lien `wa.me` avec message pré-rempli | `src/components/WhatsAppButton.jsx` |
 | Carte | Google Maps intégrée (sans clé) + lien itinéraire | `src/components/Infos.jsx`, `src/config.js` |
 | Vidéo | lecteur Facebook chargé au clic | `src/components/Video.jsx` |
-| Paiement Orange Money et carte bancaire | CinetPay (une seule intégration, mêmes clés) | `netlify/functions/paiement-cinetpay*.mjs` |
+| Paiement Orange Money (et carte si le compte le permet) | CinetPay, API v1 | `netlify/functions/paiement-cinetpay*.mjs`, `netlify/lib/payments.mjs` |
 | SEO | balises Open Graph, `sitemap.xml`, `robots.txt`, Schema.org LocalBusiness | `index.html`, `public/` |
 | Statistiques | Plausible (sans cookies) | `src/App.jsx` |
 | Images | JPG + WebP, hero en deux tailles, chargement différé | `public/img`, `scripts/images.mjs` |
@@ -86,23 +86,24 @@ Copiez `.env.example` en `.env` (jamais versionné). Sur Netlify : *Site configu
 | `VITE_PLAUSIBLE_DOMAIN` | statistiques sans cookies | https://plausible.io, ex. `camayenneplage.com` |
 | `VITE_FACEBOOK_VIDEO` | vidéo du lecteur intégré | adresse de la vidéo Facebook |
 | `VITE_FACEBOOK_PAGE`, `VITE_INSTAGRAM_PAGE`, `VITE_TIKTOK_PAGE` | icônes des réseaux dans le pied de page | adresses des pages officielles (icône masquée si vide) |
-| `CINETPAY_API_KEY`, `CINETPAY_SITE_ID` | Orange Money et carte bancaire (mêmes clés) | https://cinetpay.com, espace marchand → Intégration |
+| `CINETPAY_API_KEY`, `CINETPAY_API_PASSWORD` | paiement en ligne (Orange Money, MTN) : clé `sk_live_…` et mot de passe API | tableau de bord marchand CinetPay (panel.cinetpay.net) ; une clé `sk_test_…` bascule sur le bac à sable |
+| `CINETPAY_CARD` | `1` pour afficher l’option Carte bancaire, uniquement si CinetPay l’a activée sur le compte | à demander au commercial CinetPay |
 | `VITE_ORANGE_MONEY_NUMBER` | numéro qui reçoit les acomptes Orange Money en mode manuel, tant que CinetPay n’est pas configuré | numéro Orange Money de l’entreprise, ex. `+224 620 613 554` |
 | `SITE_URL` | URL publique pour les retours de paiement | identique à `VITE_SITE_URL` |
 | `WEB3FORMS_KEY` | e-mail « Acompte reçu » à l’équipe (facultatif) | même clé Web3Forms |
 
-Tant que les clés CinetPay sont vides, Orange Money fonctionne en mode manuel (transfert vers `VITE_ORANGE_MONEY_NUMBER` puis confirmation WhatsApp) et la carte bancaire est grisée « Bientôt disponible ».
+Tant que les clés CinetPay sont vides, Orange Money fonctionne en mode manuel (transfert vers `VITE_ORANGE_MONEY_NUMBER` puis confirmation WhatsApp) et la carte bancaire est grisée « Bientôt disponible ». La carte reste grisée tant que `CINETPAY_CARD` ne vaut pas `1`.
 
 ## Paiement d’un acompte
 
 Page `/paiement` : le client saisit nom, e-mail, référence du devis et montant, puis choisit le moyen.
 
-1. **Orange Money** : `POST /api/paiement-cinetpay` crée la transaction et redirige vers CinetPay. CinetPay prévient `/api/paiement-cinetpay-notify` ; la fonction **revérifie** la transaction auprès de CinetPay avant de l’enregistrer. Le client revient sur `/confirmation`.
-2. **Carte bancaire** : même fonction `POST /api/paiement-cinetpay` avec `channel: "card"` ; CinetPay affiche sa page de saisie de carte (Visa, Mastercard) et prévient la même URL de notification. La ville et le pays du titulaire sont demandés, la banque l’exige.
+1. **Orange Money** : `POST /api/paiement-cinetpay` se connecte à l’API CinetPay v1 (`/v1/oauth/login`, clé + mot de passe → jeton), crée la transaction (`/v1/payment`) et redirige le client vers la page de paiement CinetPay, où il valide sur son téléphone. CinetPay prévient `/api/paiement-cinetpay-notify` ; la fonction **revérifie** la transaction (`GET /v1/payment/{id}`) avant de l’enregistrer. Le client revient sur `/confirmation`, qui affiche l’état réel via `/api/paiement-statut`.
+2. **Carte bancaire** : même page de paiement CinetPay. L’API v1 ne documente que le Mobile Money ; l’option n’apparaît sur le site que si `CINETPAY_CARD=1`, à activer après confirmation par CinetPay.
 
 Chaque paiement confirmé est journalisé (Netlify → Logs → Functions) et, si `WEB3FORMS_KEY` est renseignée, un e-mail « Acompte reçu » part à l’équipe (`netlify/lib/payments.mjs`, fonction `recordPayment`, où brancher une base de données plus tard).
 
-Montants acceptés : 50 000 à 500 000 000 GNF, multiples de 5, modifiables dans `netlify/lib/payments.mjs`. Pour tester sans débit, utilisez les clés de l’environnement de test de l’espace marchand CinetPay.
+Montants acceptés : 50 000 à 500 000 000 GNF, modifiables dans `netlify/lib/payments.mjs` (CinetPay peut imposer son propre plafond par transaction). Pour tester sans débit, utilisez une clé `sk_test_…` : l’API bascule automatiquement sur le bac à sable.
 
 ## Mettre en ligne
 

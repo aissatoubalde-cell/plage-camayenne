@@ -9,7 +9,7 @@ export default async (req) => {
   try {
     if (provider === "cinetpay" && id && s.cinetpay.enabled) {
       const c = await checkCinetPayPayment(id);
-      return json({ status: c.status === "ACCEPTED" ? "paid" : c.status === "REFUSED" ? "failed" : "pending", amount: c.amount, currency: c.currency || s.cinetpay.currency });
+      return json({ status: c.status, currency: s.cinetpay.currency });
     }
   } catch (e) {
     console.error("[paiement] vérification impossible", e);

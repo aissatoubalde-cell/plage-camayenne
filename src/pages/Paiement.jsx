@@ -16,21 +16,13 @@ const steps = [
   ["Confirmation", "Notre équipe vérifie le paiement et vous confirme la réservation."],
 ];
 
-// Pays proposés pour le paiement par carte (la banque exige la ville et le pays du titulaire) : code ISO à deux lettres.
-const countries = [
-  ["GN", "Guinée"], ["SN", "Sénégal"], ["CI", "Côte d’Ivoire"], ["ML", "Mali"], ["SL", "Sierra Leone"], ["LR", "Libéria"], ["GW", "Guinée-Bissau"],
-  ["GM", "Gambie"], ["MR", "Mauritanie"], ["BF", "Burkina Faso"], ["NE", "Niger"], ["TG", "Togo"], ["BJ", "Bénin"], ["GH", "Ghana"], ["NG", "Nigéria"],
-  ["CM", "Cameroun"], ["GA", "Gabon"], ["CG", "Congo"], ["CD", "RD Congo"], ["MA", "Maroc"], ["DZ", "Algérie"], ["TN", "Tunisie"], ["EG", "Égypte"],
-  ["FR", "France"], ["BE", "Belgique"], ["CH", "Suisse"], ["DE", "Allemagne"], ["ES", "Espagne"], ["IT", "Italie"], ["PT", "Portugal"], ["GB", "Royaume-Uni"],
-  ["CA", "Canada"], ["US", "États-Unis"], ["BR", "Brésil"], ["TR", "Turquie"], ["AE", "Émirats arabes unis"], ["SA", "Arabie saoudite"], ["CN", "Chine"], ["IN", "Inde"],
-];
 
 export default function Paiement() {
   useTitle("Payer un acompte · Camayenne Plage");
   const [params] = useSearchParams();
   const [conf, setConf] = useState(undefined); // undefined = chargement, {} = indisponible
   const [method, setMethod] = useState("om"); // om = Orange Money, card = carte bancaire (tous deux via CinetPay)
-  const [f, setF] = useState({ name: "", email: "", phone: "", reference: "", amount: "", city: "", country: "GN" });
+  const [f, setF] = useState({ name: "", email: "", phone: "", reference: "", amount: "" });
   const [state, setState] = useState({ kind: params.get("annule") ? "cancel" : "idle" });
   const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
 
@@ -123,21 +115,11 @@ export default function Paiement() {
                   <Field id="p-email" label="E-mail" hint="Votre reçu y est envoyé."><input id="p-email" type="email" autoComplete="email" required value={f.email} onChange={set("email")} className={inputCls} /></Field>
                 </div>
                 <div className="grid gap-3.5 md:grid-cols-2">
-                  <Field id="p-tel" label="Téléphone"><input id="p-tel" type="tel" inputMode="tel" autoComplete="tel" required={card} placeholder={card ? "Votre numéro" : "Numéro Orange Money"} value={f.phone} onChange={set("phone")} className={inputCls} /></Field>
+                  <Field id="p-tel" label="Téléphone"><input id="p-tel" type="tel" inputMode="tel" autoComplete="tel" placeholder={card ? "+224 6xx xx xx xx" : "Numéro Orange Money"} value={f.phone} onChange={set("phone")} className={inputCls} /></Field>
                   <Field id="p-ref" label="Référence du devis"><input id="p-ref" placeholder="Indiquée sur votre devis" value={f.reference} onChange={set("reference")} className={inputCls} /></Field>
                 </div>
-                {card && (
-                  <div className="grid gap-3.5 md:grid-cols-2">
-                    <Field id="p-ville" label="Ville" hint="Demandée par votre banque pour sécuriser le paiement."><input id="p-ville" autoComplete="address-level2" required minLength={2} placeholder="Ex. Conakry" value={f.city} onChange={set("city")} className={inputCls} /></Field>
-                    <Field id="p-pays" label="Pays">
-                      <select id="p-pays" autoComplete="country" required value={f.country} onChange={set("country")} className={`${inputCls} [color-scheme:dark]`}>
-                        {countries.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
-                      </select>
-                    </Field>
-                  </div>
-                )}
                 <Field id="p-montant" label="Montant de l’acompte (GNF)" hint={`Montant indiqué sur votre devis validé (minimum ${fmt(MIN_GNF)} GNF).`}>
-                  <input id="p-montant" type="number" inputMode="numeric" required min={MIN_GNF} step={5} placeholder={`Ex. ${fmt(500000)}`} value={f.amount} onChange={set("amount")} className={`${inputCls} tabular-nums`} />
+                  <input id="p-montant" type="number" inputMode="numeric" required min={MIN_GNF} step={1} placeholder={`Ex. ${fmt(500000)}`} value={f.amount} onChange={set("amount")} className={`${inputCls} tabular-nums`} />
                 </Field>
 
                 {manual && (
@@ -161,7 +143,7 @@ export default function Paiement() {
                 <div className="flex flex-wrap gap-2.5">
                   <Button type="submit" disabled={state.kind === "sending"}>{manual ? "Confirmer sur WhatsApp" : state.kind === "sending" ? "Paiement en cours…" : `Payer ${amount > 0 ? `${fmt(amount)} GNF` : "l’acompte"}`}</Button>
                 </div>
-                {!manual && <p className="text-[13.5px] text-sand-soft">Vous êtes redirigé vers la page de paiement sécurisée de CinetPay{card ? ", où vous saisissez votre carte" : ""}. Aucune donnée bancaire ne transite par notre site. Un reçu vous est envoyé par e-mail.</p>}
+                {!manual && <p className="text-[13.5px] text-sand-soft">Vous êtes redirigé vers la page de paiement sécurisée de CinetPay{card ? ", où vous saisissez votre carte" : ", où vous validez le paiement sur votre téléphone"}. Aucune donnée bancaire ne transite par notre site.</p>}
               </form>
             )}
           </div>
