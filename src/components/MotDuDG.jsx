@@ -23,7 +23,7 @@ export default function MotDuDG() {
           </div>
         </Reveal>
         <Reveal delay={0.15} className="aspect-[4/5] w-full max-w-[320px] overflow-hidden border border-line bg-card lg:sticky lg:top-[110px] lg:max-w-[440px] lg:justify-self-end">
-          <Picture name="dg" alt="Mamadou Oury Diallo, Directeur Général de Camayenne Plage" width={900} height={1350} imgClass="h-full w-full object-cover object-[center_20%]" />
+          <Picture name="dg-2026" alt="Mamadou Oury Diallo, Directeur Général de Camayenne Plage" width={900} height={1350} imgClass="h-full w-full object-cover object-[center_20%]" />
         </Reveal>
       </Wrap>
     </section>
