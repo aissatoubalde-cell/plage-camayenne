@@ -1,6 +1,6 @@
 import { Reveal } from "./motion";
 import { ScrollEyebrow, ScrollWords } from "./text";
-import { Wrap } from "./ui";
+import { Picture, Wrap } from "./ui";
 
 export default function MotDuDG() {
   return (
@@ -22,8 +22,9 @@ export default function MotDuDG() {
             <b className="text-xl font-bold">Mamadou Oury Diallo</b>
           </div>
         </Reveal>
-        {/* Quand la photo du DG est disponible : remplacer « DG » par <img src="/img/photos/dg.jpg" alt="…" className="h-full w-full object-cover" /> */}
-        <Reveal delay={0.15} aria-label="Photo du Directeur Général" className="grid aspect-[4/5] w-full max-w-[320px] place-items-center overflow-hidden border border-line bg-card text-[110px] font-extrabold tracking-[-0.04em] text-gold lg:sticky lg:top-[110px] lg:max-w-[440px] lg:justify-self-end">DG</Reveal>
+        <Reveal delay={0.15} className="aspect-[4/5] w-full max-w-[320px] overflow-hidden border border-line bg-card lg:sticky lg:top-[110px] lg:max-w-[440px] lg:justify-self-end">
+          <Picture name="dg" alt="Mamadou Oury Diallo, Directeur Général de Camayenne Plage" width={900} height={1350} imgClass="h-full w-full object-cover object-[center_20%]" />
+        </Reveal>
       </Wrap>
     </section>
   );
