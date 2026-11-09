@@ -55,7 +55,15 @@ export const espaces = [
       ["plage-terrain", "Voile tricolore au-dessus du terrain"],
       ["plage-lumieres", "Guirlande lumineuse en soirée"],
     ], text: "Le sable et la mer pour la détente et les événements au bord de l’eau." },
-  { n: "04", photo: "sport", alt: "Terrain de beach-volley", title: "Terrains de sport", text: "Beach-volley, basketball et autres loisirs collectifs." },
+  { n: "04", photo: "sport", alt: "Terrain de beach-volley", title: "Terrains de sport",
+    photos: [
+      ["sport", "Match de beach-volley sur le sable"],
+      ["sport-equipes", "Deux équipes de beach soccer avant un match"],
+      ["sport-basket", "Terrain de basketball et buvette"],
+      ["sport-panier", "Panier de basketball vu d’en dessous"],
+      ["plage-panier", "Le terrain de basketball de la plage"],
+    ],
+    text: "Beach-volley, basketball et autres loisirs collectifs." },
   { n: "05", photo: "lounge", alt: "Espace lounge", title: "Espace lounge", text: "Pour les pauses, la convivialité et les rencontres informelles." },
   { n: "06", photo: "piloti", alt: "Espace piloti", title: "Espace piloti",
     photos: [
