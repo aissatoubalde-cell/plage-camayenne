@@ -14,8 +14,7 @@ Site de **Camayenne Plage**, complexe de loisirs et d’événementiel en bord d
 | Bouton WhatsApp flottant | lien `wa.me` avec message pré-rempli | `src/components/WhatsAppButton.jsx` |
 | Carte | Google Maps intégrée (sans clé) + lien itinéraire | `src/components/Infos.jsx`, `src/config.js` |
 | Vidéo | lecteur Facebook chargé au clic | `src/components/Video.jsx` |
-| Paiement Orange Money | CinetPay | `netlify/functions/paiement-cinetpay*.mjs` |
-| Paiement par carte | Stripe Checkout + webhook | `netlify/functions/paiement-stripe*.mjs` |
+| Paiement Orange Money et carte bancaire | CinetPay (une seule intégration, mêmes clés) | `netlify/functions/paiement-cinetpay*.mjs` |
 | SEO | balises Open Graph, `sitemap.xml`, `robots.txt`, Schema.org LocalBusiness | `index.html`, `public/` |
 | Statistiques | Plausible (sans cookies) | `src/App.jsx` |
 | Images | JPG + WebP, hero en deux tailles, chargement différé | `public/img`, `scripts/images.mjs` |
@@ -61,7 +60,7 @@ src/components/         sections de l’accueil, formulaires, galerie, en-tête,
 src/pages/              Home, Devis, Paiement, Confirmation, NotFound
 public/img, public/fonts   photos (JPG + WebP), logo, icônes, polices
 netlify/functions/      fonctions de paiement, servies sur /api/<nom>
-netlify/lib/payments.mjs   logique CinetPay, Stripe, validation, enregistrement
+netlify/lib/payments.mjs   logique CinetPay (Orange Money et carte), validation, enregistrement
 api/                    mêmes fonctions pour Vercel (réutilisent netlify/functions via netlify/lib/node-adapter.mjs)
 src/components/motion.jsx  briques d’animation (Reveal, Stagger, Counter)
 scripts/images.mjs      génération des images
@@ -87,27 +86,23 @@ Copiez `.env.example` en `.env` (jamais versionné). Sur Netlify : *Site configu
 | `VITE_PLAUSIBLE_DOMAIN` | statistiques sans cookies | https://plausible.io, ex. `camayenneplage.com` |
 | `VITE_FACEBOOK_VIDEO` | vidéo du lecteur intégré | adresse de la vidéo Facebook |
 | `VITE_FACEBOOK_PAGE`, `VITE_INSTAGRAM_PAGE`, `VITE_TIKTOK_PAGE` | icônes des réseaux dans le pied de page | adresses des pages officielles (icône masquée si vide) |
-| `CINETPAY_API_KEY`, `CINETPAY_SITE_ID` | Orange Money | https://cinetpay.com, espace marchand → Intégration |
-| `STRIPE_SECRET_KEY` | paiement par carte | https://dashboard.stripe.com/apikeys (`sk_test_…` pour tester) |
-| `STRIPE_PUBLISHABLE_KEY` | champs de carte (numéro, expiration, code, Apple Pay) affichés dans la page (sinon redirection vers Stripe) | même page, clé `pk_live_…` (`pk_test_…` pour tester) |
-| `STRIPE_WEBHOOK_SECRET` | confirmation fiable des paiements carte | Stripe → Développeurs → Webhooks → `https://votre-domaine/api/paiement-stripe-webhook`, événements `checkout.session.completed` et `payment_intent.succeeded` |
-| `NODEJS_HELPERS` | Vercel uniquement : mettre `0` pour que le webhook Stripe lise le corps brut | à saisir sur Vercel |
-| `STRIPE_CURRENCY` | devise carte | `gnf` par défaut ; `eur` ou `usd` si votre compte Stripe refuse le GNF |
+| `CINETPAY_API_KEY`, `CINETPAY_SITE_ID` | Orange Money et carte bancaire (mêmes clés) | https://cinetpay.com, espace marchand → Intégration |
+| `VITE_ORANGE_MONEY_NUMBER` | numéro qui reçoit les acomptes Orange Money en mode manuel, tant que CinetPay n’est pas configuré | numéro Orange Money de l’entreprise, ex. `+224 620 613 554` |
 | `SITE_URL` | URL publique pour les retours de paiement | identique à `VITE_SITE_URL` |
 | `WEB3FORMS_KEY` | e-mail « Acompte reçu » à l’équipe (facultatif) | même clé Web3Forms |
 
-Tant que les clés de paiement sont vides, la page `/paiement` affiche « Le paiement en ligne arrive » avec les boutons WhatsApp et Appeler. Pour voir et tester le formulaire sans clé (maquette, démonstration), mettez `VITE_PAYMENT_DEMO=1` dans `.env` : le paiement est simulé, rien n’est débité. À retirer en production.
+Tant que les clés CinetPay sont vides, Orange Money fonctionne en mode manuel (transfert vers `VITE_ORANGE_MONEY_NUMBER` puis confirmation WhatsApp) et la carte bancaire est grisée « Bientôt disponible ».
 
 ## Paiement d’un acompte
 
 Page `/paiement` : le client saisit nom, e-mail, référence du devis et montant, puis choisit le moyen.
 
 1. **Orange Money** : `POST /api/paiement-cinetpay` crée la transaction et redirige vers CinetPay. CinetPay prévient `/api/paiement-cinetpay-notify` ; la fonction **revérifie** la transaction auprès de CinetPay avant de l’enregistrer. Le client revient sur `/confirmation`.
-2. **Carte bancaire** : `POST /api/paiement-stripe` crée une session Stripe Checkout. Le webhook `/api/paiement-stripe-webhook` confirme le paiement.
+2. **Carte bancaire** : même fonction `POST /api/paiement-cinetpay` avec `channel: "card"` ; CinetPay affiche sa page de saisie de carte (Visa, Mastercard) et prévient la même URL de notification. La ville et le pays du titulaire sont demandés, la banque l’exige.
 
 Chaque paiement confirmé est journalisé (Netlify → Logs → Functions) et, si `WEB3FORMS_KEY` est renseignée, un e-mail « Acompte reçu » part à l’équipe (`netlify/lib/payments.mjs`, fonction `recordPayment`, où brancher une base de données plus tard).
 
-Montants acceptés : 50 000 à 500 000 000 GNF (10 à 50 000 en euros ou dollars), modifiables dans `netlify/lib/payments.mjs`. Test Stripe sans débit : clé `sk_test_…` et carte `4242 4242 4242 4242`.
+Montants acceptés : 50 000 à 500 000 000 GNF, multiples de 5, modifiables dans `netlify/lib/payments.mjs`. Pour tester sans débit, utilisez les clés de l’environnement de test de l’espace marchand CinetPay.
 
 ## Mettre en ligne
 
@@ -126,7 +121,7 @@ git push -u origin main
 ### 2. Vercel (gratuit pour un site vitrine)
 
 1. Sur https://vercel.com/new, importez le dépôt GitHub : Vite est détecté, `vercel.json` gère le routage des pages et les en-têtes, les fonctions de paiement sont dans `api/`.
-2. *Settings → Environment Variables* : ajoutez les variables du tableau ci-dessus (au moins `VITE_SITE_URL` et `SITE_URL` avec l’adresse `https://….vercel.app` ou votre domaine). Ajoutez aussi `NODEJS_HELPERS` = `0` pour que le webhook Stripe reçoive le corps brut de la requête.
+2. *Settings → Environment Variables* : ajoutez les variables du tableau ci-dessus (au moins `VITE_SITE_URL` et `SITE_URL` avec l’adresse `https://….vercel.app` ou votre domaine).
 3. Déployez. Chaque `git push` sur `main` met le site à jour. Après un changement de variables, relancez un déploiement (*Deployments → Redeploy*).
 
 ### 2 bis. Netlify (alternative)
@@ -142,5 +137,5 @@ Achetez le domaine (OVH, Namecheap, Hostinger…), puis Vercel → *Settings →
 ### 4. Après la mise en ligne
 
 - Google Search Console : déclarez le site et envoyez `https://votre-domaine/sitemap.xml`.
-- Stripe : créez le webhook avec l’URL de production et renseignez `STRIPE_WEBHOOK_SECRET`.
+- CinetPay : faites un premier acompte réel au minimum (50 000 GNF) en Orange Money et en carte pour vérifier la chaîne complète, puis remboursez-le depuis l’espace marchand.
 - Vérifiez la carte et la vidéo Facebook (si le lecteur reste vide, mettez dans `VITE_FACEBOOK_VIDEO` l’adresse complète de la vidéo, de la forme `https://www.facebook.com/<page>/videos/<id>/`).

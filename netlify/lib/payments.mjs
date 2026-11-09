@@ -1,14 +1,12 @@
 // Logique partagée des fonctions de paiement (Netlify Functions). Les clés viennent des variables d’environnement.
-import Stripe from "stripe";
-
-const ZERO_DECIMAL = new Set(["bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga", "pyg", "rwf", "ugx", "vnd", "vuv", "xaf", "xof", "xpf"]);
+// Orange Money et carte bancaire passent tous deux par CinetPay : une seule intégration, un seul jeu de clés.
 const CINETPAY_API = "https://api-checkout.cinetpay.com/v2";
+export const CURRENCY = "GNF";
 
 export function settings() {
   const env = process.env;
   return {
-    cinetpay: { apiKey: env.CINETPAY_API_KEY || "", siteId: env.CINETPAY_SITE_ID || "", currency: "GNF", enabled: Boolean(env.CINETPAY_API_KEY && env.CINETPAY_SITE_ID) },
-    stripe: { secretKey: env.STRIPE_SECRET_KEY || "", publishableKey: env.STRIPE_PUBLISHABLE_KEY || "", webhookSecret: env.STRIPE_WEBHOOK_SECRET || "", currency: (env.STRIPE_CURRENCY || "gnf").toLowerCase(), enabled: Boolean(env.STRIPE_SECRET_KEY) },
+    cinetpay: { apiKey: env.CINETPAY_API_KEY || "", siteId: env.CINETPAY_SITE_ID || "", currency: CURRENCY, enabled: Boolean(env.CINETPAY_API_KEY && env.CINETPAY_SITE_ID) },
     web3formsKey: env.WEB3FORMS_KEY || "",
   };
 }
@@ -20,32 +18,45 @@ export const json = (data, status = 200) => new Response(JSON.stringify(data), {
 export const text = (body, status = 200) => new Response(body, { status, headers: { "Content-Type": "text/plain; charset=utf-8" } });
 
 export const formatAmount = (n) => new Intl.NumberFormat("fr-FR").format(n);
-export const amountBounds = (currency) => (currency.toLowerCase() === "gnf" ? { min: 50_000, max: 500_000_000 } : { min: 10, max: 50_000 });
-export const toMinorUnits = (amount, currency) => (ZERO_DECIMAL.has(currency.toLowerCase()) ? amount : Math.round(amount * 100));
-export const fromMinorUnits = (amount, currency) => (ZERO_DECIMAL.has(currency.toLowerCase()) ? amount : amount / 100);
+export const amountBounds = () => ({ min: 50_000, max: 500_000_000 });
 
 const str = (v, max) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
+/** Canaux CinetPay : Orange Money (Mobile Money) ou carte bancaire. */
+export const CHANNELS = { mobile: "MOBILE_MONEY", card: "CREDIT_CARD" };
+
 /** Valide le corps JSON du formulaire de paiement. */
-export function parsePaymentInput(body, currency) {
+export function parsePaymentInput(body) {
   const b = body && typeof body === "object" ? body : {};
+  const channel = b.channel === "card" ? "card" : "mobile";
   const name = str(b.name, 80), email = str(b.email, 120), phone = str(b.phone, 30).replace(/[^\d+ ]/g, ""), reference = str(b.reference, 40);
+  const city = str(b.city, 60), country = str(b.country, 2).toUpperCase();
   const amount = Number(b.amount);
   if (name.length < 2) return { ok: false, error: "Indiquez votre nom." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: "Indiquez un e-mail valide." };
   if (!Number.isInteger(amount)) return { ok: false, error: "Le montant doit être un nombre entier." };
-  const { min, max } = amountBounds(currency);
-  if (amount < min || amount > max) return { ok: false, error: `Le montant doit être compris entre ${formatAmount(min)} et ${formatAmount(max)} ${currency.toUpperCase()}.` };
-  return { ok: true, data: { name, email, phone, reference, amount } };
+  if (amount % 5 !== 0) return { ok: false, error: "Le montant doit être un multiple de 5 GNF." };
+  const { min, max } = amountBounds();
+  if (amount < min || amount > max) return { ok: false, error: `Le montant doit être compris entre ${formatAmount(min)} et ${formatAmount(max)} ${CURRENCY}.` };
+  if (channel === "card") {
+    // La banque exige ces informations pour sécuriser un paiement par carte (sinon CinetPay refuse la transaction).
+    if (phone.replace(/\D/g, "").length < 8) return { ok: false, error: "Indiquez votre numéro de téléphone : il est demandé pour le paiement par carte." };
+    if (city.length < 2) return { ok: false, error: "Indiquez votre ville : elle est demandée pour le paiement par carte." };
+    if (!/^[A-Z]{2}$/.test(country)) return { ok: false, error: "Indiquez votre pays." };
+  }
+  return { ok: true, data: { channel, name, email, phone, reference, amount, city, country } };
 }
 
 export const readJson = (req) => req.json().catch(() => null);
 
-/* ---------- CinetPay (Orange Money) : https://docs.cinetpay.com ---------- */
+/* ---------- CinetPay (Orange Money et carte bancaire) : https://docs.cinetpay.com ---------- */
 export async function createCinetPayPayment(input, urls) {
   const s = settings().cinetpay;
   const transactionId = `CP-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
   const [first, ...rest] = input.name.split(/\s+/);
+  const address = input.city
+    ? { customer_address: input.city, customer_city: input.city, customer_country: input.country || "GN", customer_state: input.city, customer_zip_code: "00000" }
+    : {};
   const res = await fetch(`${CINETPAY_API}/payment`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -53,7 +64,8 @@ export async function createCinetPayPayment(input, urls) {
       apikey: s.apiKey, site_id: s.siteId, transaction_id: transactionId, amount: input.amount, currency: s.currency,
       description: `Acompte Camayenne Plage${input.reference ? ` – réf. ${input.reference}` : ""}`,
       customer_name: first, customer_surname: rest.join(" ") || first, customer_email: input.email, customer_phone_number: input.phone,
-      notify_url: urls.notifyUrl, return_url: urls.returnUrl, channels: "MOBILE_MONEY", lang: "fr", metadata: input.reference,
+      ...address,
+      notify_url: urls.notifyUrl, return_url: urls.returnUrl, channels: CHANNELS[input.channel] || CHANNELS.mobile, lang: "fr", metadata: input.reference,
     }),
   });
   const j = await res.json();
@@ -84,46 +96,12 @@ export async function readTransactionId(req) {
   return typeof v === "string" && v ? v : null;
 }
 
-/* ---------- Stripe (carte bancaire) : https://docs.stripe.com/payments/checkout ---------- */
-let stripeClient = null;
-export function getStripe() {
-  const s = settings().stripe;
-  if (!s.enabled) throw new Error("Stripe n’est pas configuré (STRIPE_SECRET_KEY).");
-  return (stripeClient ??= new Stripe(s.secretKey));
-}
-
-export async function createStripeCheckout(input, urls) {
-  const currency = settings().stripe.currency;
-  const session = await getStripe().checkout.sessions.create({
-    mode: "payment",
-    success_url: urls.successUrl,
-    cancel_url: urls.cancelUrl,
-    customer_email: input.email,
-    line_items: [{ quantity: 1, price_data: { currency, unit_amount: toMinorUnits(input.amount, currency), product_data: { name: "Acompte – Camayenne Plage", description: input.reference ? `Référence du devis : ${input.reference}` : "Acompte de réservation" } } }],
-    metadata: { name: input.name, phone: input.phone, reference: input.reference },
-    locale: "fr",
-  });
-  if (!session.url) throw new Error("Stripe n’a pas renvoyé d’URL de paiement.");
-  return { sessionId: session.id, url: session.url };
-}
-
-/** PaymentIntent pour le formulaire de carte intégré à la page (Stripe Payment Element). Renvoie le client_secret. */
-export async function createStripeIntent(input) {
-  const currency = settings().stripe.currency;
-  const intent = await getStripe().paymentIntents.create({
-    amount: toMinorUnits(input.amount, currency),
-    currency,
-    automatic_payment_methods: { enabled: true },
-    receipt_email: input.email,
-    description: input.reference ? `Acompte – Camayenne Plage (devis ${input.reference})` : "Acompte – Camayenne Plage",
-    metadata: { name: input.name, email: input.email, phone: input.phone, reference: input.reference },
-  });
-  return { id: intent.id, clientSecret: intent.client_secret };
-}
+/** Libellé lisible du moyen de paiement renvoyé par CinetPay (ex. OM, VISAM, MASTERCARD). */
+const methodLabel = (m) => (/VISA|MASTER|CARD|CB/i.test(m || "") ? "Carte bancaire" : "Orange Money") + (m ? ` (${m})` : "");
 
 /* ---------- Enregistrement ---------- */
 /**
- * Enregistre un paiement confirmé : journal serveur (visible dans Netlify > Logs > Functions) et, si WEB3FORMS_KEY
+ * Enregistre un paiement confirmé : journal serveur (Vercel ou Netlify → Logs → Functions) et, si WEB3FORMS_KEY
  * est renseignée, e-mail « Acompte reçu » à l’équipe. C’est ici que l’on branchera une base de données plus tard.
  */
 export async function recordPayment(p) {
@@ -133,7 +111,7 @@ export async function recordPayment(p) {
   const lines = [
     "Un acompte vient d’être reçu sur le site Camayenne Plage.", "",
     `• Montant : ${formatAmount(p.amount)} ${p.currency}`,
-    `• Moyen : ${p.provider === "cinetpay" ? `Orange Money${p.method ? ` (${p.method})` : ""}` : "Carte bancaire (Stripe)"}`,
+    `• Moyen : ${methodLabel(p.method)} via CinetPay`,
     `• Transaction : ${p.transactionId}`,
     p.reference ? `• Référence devis : ${p.reference}` : "",
     p.customer?.name ? `• Client : ${p.customer.name}` : "",
