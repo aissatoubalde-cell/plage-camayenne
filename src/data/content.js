@@ -68,7 +68,15 @@ export const espaces = [
       ["piloti-plage", "Les kiosques vus depuis la plage"],
       ["piloti-piscine", "Les kiosques derrière la piscine"],
     ], text: "Un kiosque sur pilotis au-dessus de l’eau, pour un dîner ou une rencontre hors du commun." },
-  { n: "07", photo: "enfants", alt: "Espace enfants", title: "Espace enfants", text: "Aire de jeux avec toboggans et balançoires, pensée pour les familles." },
+  { n: "07", photo: "enfants-pingpong", alt: "Espace enfants", title: "Espace enfants",
+    photos: [
+      ["enfants-pingpong", "Une enfant joue au ping-pong"],
+      ["enfants-cubes", "Une petite fille joue avec des cubes en bois"],
+      ["enfants-jeux", "Enfants autour d’une table de jeux de construction"],
+      ["enfants-gonflable", "Une enfant joue devant la structure gonflable"],
+      ["enfants-sourire", "Une enfant sourit au milieu du groupe"],
+      ["enfants-groupe", "Un groupe d’enfants lors d’une journée à la plage"],
+    ], text: "Aire de jeux avec toboggans et balançoires, pensée pour les familles." },
 ];
 
 export const activites = [
