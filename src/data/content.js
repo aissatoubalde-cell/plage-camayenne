@@ -37,7 +37,6 @@ export const espaces = [
       ["exterieur", "Espaces extérieurs"],
       ["exterieur-paillotes", "Paillotes et tables sur le sable, sous les palmiers"],
       ["exterieur-tables", "Tables sous les paillotes aux couleurs nationales"],
-      ["exterieur-diner", "Table dressée pour un dîner"],
     ], text: "Réceptions, cocktails et événements en plein air, à l’ombre des paillotes et des palmiers." },
   { n: "03", photo: "plage-vue", alt: "Espace plage", title: "Espace plage",
     photos: [
