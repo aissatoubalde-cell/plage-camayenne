@@ -22,7 +22,9 @@ export default function Slideshow({ photos, className = "" }) {
       ))}
       <button type="button" onClick={() => go(-1)} aria-label="Photo précédente" className={`${arrow} left-1.5`}>‹</button>
       <button type="button" onClick={() => go(1)} aria-label="Photo suivante" className={`${arrow} right-1.5`}>›</button>
-      <div className="absolute inset-x-0 bottom-1.5 z-10 flex justify-center gap-1">
+      {/* Au-delà de 8 photos, les points ne tiennent pas dans la vignette sur tablette/ordinateur : compteur à la place. */}
+      {n > 8 && <span className="absolute right-1.5 bottom-1.5 z-10 hidden rounded-full bg-night/70 px-2 py-0.5 text-[11px] font-semibold text-sand tabular-nums md:block lg:hidden">{i + 1} / {n}</span>}
+      <div className={`absolute inset-x-0 bottom-1.5 z-10 flex justify-center gap-1 ${n > 8 ? "md:hidden lg:flex" : ""}`}>
         {photos.map(([name], k) => (
           <button key={name} type="button" onClick={() => setI(k)} aria-label={`Photo ${k + 1} sur ${n}`} aria-current={k === i} className={`h-1.5 cursor-pointer rounded-full transition-all ${k === i ? "w-3.5 bg-gold" : "w-1.5 bg-sand/60"}`} />
         ))}
