@@ -36,17 +36,7 @@ export const espaces = [
   { n: "03", photo: "plage", alt: "Espace plage", title: "Espace plage", text: "Le sable et la mer pour la détente et les événements au bord de l’eau." },
   { n: "04", photo: "sport", alt: "Terrain de beach-volley", title: "Terrains de sport", text: "Beach-volley, basketball et autres loisirs collectifs." },
   { n: "05", photo: "lounge", alt: "Espace lounge", title: "Espace lounge", text: "Pour les pauses, la convivialité et les rencontres informelles." },
-  { n: "06", photo: "piloti", alt: "Espace piloti", title: "Espace piloti",
-    photos: [
-      ["piloti", "Les kiosques sur pilotis au-dessus de l’eau, en soirée"],
-      ["piloti-diner", "Table dressée sous un kiosque, face à la mer"],
-      ["piloti-ponton", "Ponton décoré menant à un kiosque"],
-      ["piloti-kiosques", "Kiosques sur pilotis décorés aux couleurs nationales"],
-      ["piloti-jour", "Deux kiosques reliés par une passerelle"],
-      ["piloti-kiosque", "Entrée d’un kiosque sur pilotis"],
-      ["piloti-plage", "Les kiosques vus depuis la plage"],
-      ["piloti-piscine", "Les kiosques derrière la piscine"],
-    ], text: "Un kiosque sur pilotis au-dessus de l’eau, pour un dîner ou une rencontre hors du commun." },
+  { n: "06", photo: "piloti", alt: "Espace piloti", title: "Espace piloti", text: "Un kiosque sur pilotis au-dessus de l’eau, pour un dîner ou une rencontre hors du commun." },
   { n: "07", photo: "enfants", alt: "Espace enfants", title: "Espace enfants", text: "Aire de jeux avec toboggans et balançoires, pensée pour les familles." },
 ];
 
