@@ -49,9 +49,7 @@ export const espaces = [
     photos: [
       ["plage-vue", "Vue aérienne de la plage et des terrains"],
       ["plage-guinee", "La plage et les lettres Guinée face à la mer"],
-      ["plage-basket", "Terrain de basketball face à la mer"],
       ["plage-kiosques", "Les kiosques vus depuis la plage"],
-      ["plage-panier", "Panier de basketball et buvette de la plage"],
       ["plage-jeux", "Aire de jeux sous les palmiers"],
       ["plage-facade", "Entrée de Camayenne Plage aux couleurs de la Guinée"],
       ["plage-entree", "Accueil et clôture décorée"],
@@ -68,6 +66,7 @@ export const espaces = [
       ["sport-equipes", "Deux équipes de beach soccer avant un match"],
       ["sport-basket", "Terrain de basketball et buvette"],
       ["sport-panier", "Panier de basketball vu d’en dessous"],
+      ["plage-basket", "Terrain de basketball face à la mer"],
       ["plage-panier", "Le terrain de basketball de la plage"],
       ["sport-foot", "Football sur le sable au coucher du soleil"],
       ["lounge-billard", "Partie de billard"],
