@@ -64,7 +64,16 @@ export const espaces = [
       ["plage-panier", "Le terrain de basketball de la plage"],
     ],
     text: "Beach-volley, basketball et autres loisirs collectifs." },
-  { n: "05", photo: "lounge", alt: "Espace lounge", title: "Espace lounge", text: "Pour les pauses, la convivialité et les rencontres informelles." },
+  { n: "05", photo: "lounge", alt: "Espace lounge", title: "Espace lounge",
+    photos: [
+      ["lounge", "Espace lounge"],
+      ["lounge-buffet", "Buffet dressé avec plateaux et fleurs blanches"],
+      ["lounge-cocktail", "Buffet cocktail de viennoiseries et mini-burgers"],
+      ["lounge-diner", "Dîner entre invités sous un kiosque, le soir"],
+      ["piloti-diner", "Table dressée face à la mer"],
+      ["plage-lumieres", "Guirlande lumineuse en soirée"],
+    ],
+    text: "Pour les pauses, la convivialité et les rencontres informelles." },
   { n: "06", photo: "piloti", alt: "Espace piloti", title: "Espace piloti",
     photos: [
       ["piloti", "Les kiosques sur pilotis au-dessus de l’eau, en soirée"],
