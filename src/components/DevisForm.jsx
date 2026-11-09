@@ -7,16 +7,21 @@ import { ease } from "./motion";
 import { Icon } from "./ui/icons";
 
 const fmtDate = (d) => { if (!d) return ""; const [y, mo, j] = d.split("-"); return `${j}/${mo}/${y}`; };
+const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
+const emailError = (v) => (v.trim() && !isEmail(v) ? "Adresse e-mail incomplète, ex. prenom@exemple.com" : "");
+// Téléphone : chiffres, espaces, parenthèses, tirets et un « + » en tête seulement ; les lettres sont ignorées à la saisie.
+const cleanTel = (v) => v.replace(/[^\d\s+().-]/g, "").replace(/(?!^)\+/g, "").slice(0, 20);
 
 const field = "w-full rounded-xl border border-line bg-night px-4 py-3.5 text-base leading-snug font-medium text-sand placeholder:text-[#6F8783] transition-[border-color,box-shadow] focus:border-gold focus:ring-2 focus:ring-gold/25 focus:outline-none";
 const label = "text-[11.5px] font-semibold tracking-[0.14em] uppercase text-sand-soft";
 const chip = "inline-flex cursor-pointer items-center gap-2 rounded-full border border-line bg-night px-4 py-2.5 text-sm font-medium text-sand-soft transition-colors select-none hover:border-sand/40 has-checked:border-gold has-checked:bg-gold/10 has-checked:text-gold";
 
-function Field({ id, children, ...rest }) {
+function Field({ id, children, error, ...rest }) {
   return (
     <div className="grid min-w-0 gap-2">
       <label htmlFor={id} className={label}>{rest.label}</label>
       {children}
+      {error && <p id={`${id}-err`} role="alert" className="text-[13px] text-danger">{error}</p>}
     </div>
   );
 }
@@ -67,6 +72,7 @@ export default function DevisForm() {
   const [f, setF] = useState({ nom: "", org: "", email: "", tel: "", type: eventTypes[0], date: "", nb: "", duree: durations[1], espaces: [], services: [], msg: "" });
   const [status, setStatus] = useState({ kind: "idle" });
   const [showPreview, setShowPreview] = useState(false);
+  const [errors, setErrors] = useState({});
   const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
 
   const message = useMemo(() => {
@@ -87,9 +93,16 @@ export default function DevisForm() {
 
   const submit = async (e) => {
     e.preventDefault();
+    const next = { email: emailError(f.email) };
+    if (hasKey) {
+      if (!f.nom.trim()) next.nom = "Indiquez votre nom pour que nous puissions vous répondre.";
+      if (!f.email.trim()) next.email = "Indiquez votre e-mail pour recevoir le devis.";
+    }
+    setErrors(next);
+    const firstBad = ["nom", "email"].find((k) => next[k]);
+    if (firstBad) { document.getElementById(`q-${firstBad}`)?.focus(); return; }
     if (!hasKey) { window.location.href = mailto; return; }
     if (e.currentTarget.elements.botcheck.checked) return;
-    if (!f.nom.trim() || !f.email.trim()) { setStatus({ kind: "err", text: "Indiquez votre nom et votre e-mail pour que nous puissions vous répondre." }); return; }
     setStatus({ kind: "sending" });
     try {
       const res = await fetch("https://api.web3forms.com/submit", {
@@ -111,10 +124,10 @@ export default function DevisForm() {
 
       <Step n="1" title="Vos coordonnées">
         <div className="grid gap-4 md:grid-cols-2">
-          <Field id="q-nom" label="Nom et prénom"><input id="q-nom" autoComplete="name" placeholder="Ex. Aïssatou Diallo" value={f.nom} onChange={set("nom")} className={field} /></Field>
+          <Field id="q-nom" label="Nom et prénom" error={errors.nom}><input id="q-nom" autoComplete="name" placeholder="Ex. Aïssatou Diallo" value={f.nom} onChange={(e) => { set("nom")(e); if (errors.nom && e.target.value.trim()) setErrors((er) => ({ ...er, nom: "" })); }} aria-invalid={Boolean(errors.nom)} aria-describedby={errors.nom ? "q-nom-err" : undefined} className={`${field} ${errors.nom ? "border-danger" : ""}`} /></Field>
           <Field id="q-org" label="Entreprise ou organisation"><input id="q-org" autoComplete="organization" placeholder="Facultatif" value={f.org} onChange={set("org")} className={field} /></Field>
-          <Field id="q-email" label="E-mail"><input id="q-email" type="email" autoComplete="email" placeholder="Pour recevoir le devis" value={f.email} onChange={set("email")} className={field} /></Field>
-          <Field id="q-tel" label="Téléphone"><input id="q-tel" type="tel" autoComplete="tel" placeholder="+224 6xx xxx xxx" value={f.tel} onChange={set("tel")} className={field} /></Field>
+          <Field id="q-email" label="E-mail" error={errors.email}><input id="q-email" type="email" inputMode="email" autoComplete="email" placeholder="Pour recevoir le devis" value={f.email} onChange={(e) => { const v = e.target.value; setF((s) => ({ ...s, email: v })); if (errors.email) setErrors((er) => ({ ...er, email: emailError(v) })); }} onBlur={() => setErrors((er) => ({ ...er, email: emailError(f.email) }))} aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "q-email-err" : undefined} className={`${field} ${errors.email ? "border-danger" : ""}`} /></Field>
+          <Field id="q-tel" label="Téléphone"><input id="q-tel" type="tel" inputMode="tel" autoComplete="tel" placeholder="+224 6xx xxx xxx" maxLength={20} value={f.tel} onChange={(e) => setF((s) => ({ ...s, tel: cleanTel(e.target.value) }))} className={field} /></Field>
         </div>
       </Step>
 
@@ -172,15 +185,10 @@ export default function DevisForm() {
       )}
 
       <div className="grid gap-3.5">
-        {hasKey ? (
-          <button type="submit" disabled={status.kind === "sending"} className="inline-flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl bg-gold px-6 py-[18px] text-[15px] leading-none font-semibold text-night transition-colors hover:bg-gold-deep disabled:cursor-not-allowed disabled:opacity-55">
-            {status.kind === "sending" ? "Envoi…" : "Envoyer ma demande"}<Icon name="send" className="h-4 w-4" />
-          </button>
-        ) : (
-          <a href={mailto} className="inline-flex w-full items-center justify-center gap-2.5 rounded-xl bg-gold px-6 py-[18px] text-[15px] leading-none font-semibold text-night no-underline transition-colors hover:bg-gold-deep">
-            Envoyer ma demande par e-mail<Icon name="send" className="h-4 w-4" />
-          </a>
-        )}
+        {/* Un seul bouton d’envoi dans les deux modes : la vérification des champs se fait avant d’envoyer ou d’ouvrir la messagerie. */}
+        <button type="submit" disabled={status.kind === "sending"} className="inline-flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl bg-gold px-6 py-[18px] text-[15px] leading-none font-semibold text-night transition-colors hover:bg-gold-deep disabled:cursor-not-allowed disabled:opacity-55">
+          {status.kind === "sending" ? "Envoi…" : hasKey ? "Envoyer ma demande" : "Envoyer ma demande par e-mail"}<Icon name="send" className="h-4 w-4" />
+        </button>
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13.5px] text-sand-soft">
           {hasKey && <a href={mailto} className="inline-flex items-center gap-1.5 no-underline hover:text-sand"><Icon name="mail" className="h-4 w-4" />Envoyer depuis ma messagerie</a>}
           <CopyButton text={message} label="Copier la demande" className="inline-flex cursor-pointer items-center gap-1.5 hover:text-sand" />
