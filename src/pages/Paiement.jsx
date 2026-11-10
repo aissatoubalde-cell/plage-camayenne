@@ -22,7 +22,7 @@ export default function Paiement() {
   const [params] = useSearchParams();
   const [conf, setConf] = useState(undefined); // undefined = chargement, {} = indisponible
   const [method, setMethod] = useState("om"); // om = Orange Money, card = carte bancaire (tous deux via CinetPay)
-  const [f, setF] = useState({ name: "", email: "", phone: "", reference: "", amount: "" });
+  const [f, setF] = useState({ name: "", email: "", phone: "", reference: "", amount: "", transaction: "" });
   const [state, setState] = useState({ kind: params.get("annule") ? "cancel" : "idle" });
   const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
 
@@ -38,21 +38,37 @@ export default function Paiement() {
   // Sans clés CinetPay, Orange Money reste actif en mode manuel : transfert vers notre numéro puis confirmation WhatsApp.
   const manual = method === "om" && conf && !conf.cinetpay;
 
+  const manualMsg = [
+    "Bonjour, je règle l’acompte de ma réservation par Orange Money.",
+    `• Nom : ${f.name}`,
+    f.reference && `• Référence du devis : ${f.reference}`,
+    `• Montant : ${fmt(amount)} GNF`,
+    f.phone && `• Numéro Orange Money utilisé : ${f.phone}`,
+    f.transaction && `• N° de transaction : ${f.transaction}`,
+    `• E-mail : ${f.email}`,
+    "Je joins la capture du SMS de confirmation.",
+  ].filter(Boolean).join("\n");
+
   const submit = async (e) => {
     e.preventDefault();
     if (manual) {
-      const msg = [
-        "Bonjour, je règle l’acompte de ma réservation par Orange Money.",
-        `• Nom : ${f.name}`,
-        f.reference && `• Référence du devis : ${f.reference}`,
-        `• Montant : ${fmt(amount)} GNF`,
-        f.phone && `• Numéro Orange Money utilisé : ${f.phone}`,
-        `• E-mail : ${f.email}`,
-        "Je joins la capture du SMS de confirmation.",
-      ].filter(Boolean).join("\n");
-      window.open(whatsappLink(msg), "_blank", "noopener");
-      setState({ kind: "manual-sent" });
-      return;
+      // Le paiement déclaré est enregistré pour l'équipe (page /admin, à vérifier) ; WhatsApp reste possible en plus.
+      setState({ kind: "sending" });
+      try {
+        const res = await fetch("/api/paiement-declare", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...f, amount }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (res.ok) return setState({ kind: "manual-ok" });
+        if (json.erreur === "doublon") return setState({ kind: "err", text: "Ce numéro de transaction a déjà été déclaré. Si c’est une erreur, contactez-nous sur WhatsApp." });
+        if (json.erreur === "transaction") return setState({ kind: "err", text: "Vérifiez le numéro de transaction : il figure dans le SMS de confirmation Orange Money." });
+        throw new Error();
+      } catch {
+        // Enregistrement impossible : on garde l'ancien parcours, confirmation par WhatsApp.
+        window.open(whatsappLink(manualMsg), "_blank", "noopener");
+        return setState({ kind: "manual-sent" });
+      }
     }
     setState({ kind: "sending" });
     try {
@@ -100,7 +116,7 @@ export default function Paiement() {
                     <label className={methodCls}>
                       <input type="radio" name="method" value="om" checked={method === "om"} onChange={() => setMethod("om")} className="row-span-2 accent-gold" />
                       <b className="text-[15px]">Orange Money</b>
-                      <small className="text-[13px] text-sand-soft">{conf.cinetpay ? "Paiement sécurisé via CinetPay" : "Transfert puis confirmation WhatsApp"}</small>
+                      <small className="text-[13px] text-sand-soft">{conf.cinetpay ? "Paiement sécurisé via CinetPay" : "Transfert, puis n° de transaction du SMS"}</small>
                     </label>
                     <label className={methodCls}>
                       <input type="radio" name="method" value="card" checked={card} disabled={!conf.card} onChange={() => setMethod("card")} className="row-span-2 accent-gold" />
@@ -115,12 +131,18 @@ export default function Paiement() {
                   <Field id="p-email" label="E-mail" hint="Votre reçu y est envoyé."><input id="p-email" type="email" autoComplete="email" required value={f.email} onChange={set("email")} className={inputCls} /></Field>
                 </div>
                 <div className="grid gap-3.5 md:grid-cols-2">
-                  <Field id="p-tel" label="Téléphone"><input id="p-tel" type="tel" inputMode="tel" autoComplete="tel" placeholder={card ? "+224 6xx xx xx xx" : "Numéro Orange Money"} value={f.phone} onChange={set("phone")} className={inputCls} /></Field>
+                  <Field id="p-tel" label="Téléphone"><input id="p-tel" type="tel" inputMode="tel" autoComplete="tel" required={manual} placeholder={card ? "+224 6xx xx xx xx" : "Numéro Orange Money"} value={f.phone} onChange={set("phone")} className={inputCls} /></Field>
                   <Field id="p-ref" label="Référence du devis"><input id="p-ref" placeholder="Indiquée sur votre devis" value={f.reference} onChange={set("reference")} className={inputCls} /></Field>
                 </div>
                 <Field id="p-montant" label="Montant de l’acompte (GNF)" hint={`Montant indiqué sur votre devis validé (minimum ${fmt(MIN_GNF)} GNF).`}>
                   <input id="p-montant" type="number" inputMode="numeric" required min={MIN_GNF} step={1} placeholder={`Ex. ${fmt(500000)}`} value={f.amount} onChange={set("amount")} className={`${inputCls} tabular-nums`} />
                 </Field>
+
+                {manual && (
+                  <Field id="p-transaction" label="N° de transaction Orange Money" hint="Il figure dans le SMS de confirmation Orange Money reçu après l’envoi.">
+                    <input id="p-transaction" required autoComplete="off" spellCheck={false} placeholder="Ex. CI251110.1234.A12345" value={f.transaction} onChange={(e) => setF((s) => ({ ...s, transaction: e.target.value.replace(/\s+/g, "") }))} className={`${inputCls} tracking-[0.04em]`} />
+                  </Field>
+                )}
 
                 {manual && (
                   <div className="grid gap-2 border border-gold/40 bg-night p-4 text-[14px] text-sand-soft">
@@ -133,15 +155,21 @@ export default function Paiement() {
                       <CopyButton text={site.orangeMoney.replace(/\s/g, "")} />
                     </div>
                     <ol start={2} className="grid list-decimal gap-1 pl-5">
-                      <li>Remplissez ce formulaire puis cliquez sur « Confirmer sur WhatsApp ».</li>
-                      <li>Joignez la capture du SMS de confirmation : notre équipe valide votre réservation.</li>
+                      <li>Remplissez ce formulaire avec le numéro de transaction du SMS, puis cliquez sur « Envoyer ma confirmation ».</li>
+                      <li>Notre équipe vérifie le paiement et vous confirme la réservation.</li>
                     </ol>
                   </div>
+                )}
+                {state.kind === "manual-ok" && (
+                  <Status kind="ok">
+                    Merci ! Votre paiement est bien enregistré : notre équipe le vérifie et vous confirme la réservation.{" "}
+                    <a href={whatsappLink(manualMsg)} target="_blank" rel="noopener noreferrer" className="font-semibold text-sand underline">Envoyer aussi la capture du SMS sur WhatsApp</a> (facultatif).
+                  </Status>
                 )}
                 {state.kind === "manual-sent" && <Status kind="ok">Merci ! Envoyez le message WhatsApp qui vient de s’ouvrir avec la capture du SMS Orange Money. Notre équipe vous confirme la réservation.</Status>}
                 {state.kind === "err" && <Status kind="err">{state.text}</Status>}
                 <div className="flex flex-wrap gap-2.5">
-                  <Button type="submit" disabled={state.kind === "sending"}>{manual ? "Confirmer sur WhatsApp" : state.kind === "sending" ? "Paiement en cours…" : `Payer ${amount > 0 ? `${fmt(amount)} GNF` : "l’acompte"}`}</Button>
+                  <Button type="submit" disabled={state.kind === "sending" || state.kind === "manual-ok"}>{manual ? (state.kind === "sending" ? "Envoi…" : "Envoyer ma confirmation") : state.kind === "sending" ? "Paiement en cours…" : `Payer ${amount > 0 ? `${fmt(amount)} GNF` : "l’acompte"}`}</Button>
                 </div>
                 {!manual && <p className="text-[13.5px] text-sand-soft">Vous êtes redirigé vers la page de paiement sécurisée de CinetPay{card ? ", où vous saisissez votre carte" : ", où vous validez le paiement sur votre téléphone"}. Aucune donnée bancaire ne transite par notre site.</p>}
               </form>

@@ -4,7 +4,7 @@
 // - Données dans la base PostgreSQL (netlify/lib/demandes.mjs, variable DATABASE_URL).
 import crypto from "node:crypto";
 import {
-  ajouterPaiement, lister, modifierDemande, noterEchec, pointerPaiement, supprimerDemande, supprimerPaiement, tropDEssais, urlBase,
+  ajouterPaiement, historique, lister, modifierDemande, modifierPaiement, noterEchec, supprimerDemande, supprimerPaiement, tropDEssais, urlBase,
 } from "../lib/demandes.mjs";
 
 const COOKIE = "cp_admin";
@@ -83,7 +83,8 @@ export default async (request) => {
       }
       case "supprimer": return reponse(await supprimerDemande(d.id));
       case "paiement-ajouter": return reponse(await ajouterPaiement(d));
-      case "paiement-pointer": return reponse(await pointerPaiement(d.id, d.pointe));
+      case "paiement-modifier": return reponse(await modifierPaiement({ id: d.id, pointe: d.pointe, statut: d.statut }));
+      case "historique": return json(await historique(d.mois));
       case "paiement-supprimer": return reponse(await supprimerPaiement(d.id));
       default: return json({ erreur: "action" }, 400);
     }

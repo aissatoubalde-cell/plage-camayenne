@@ -437,11 +437,12 @@ function FormPaiement({ demandes, onAjoute }) {
 function VuePaiements({ demandes, paiements, onChange }) {
   const debut = debutDuMois();
   const duMois = paiements.filter((p) => p.date && jour(p.date) >= debut && p.statut === "Confirmé");
+  const aVerifier = paiements.filter((p) => p.statut === "En attente").length;
   const [erreur, setErreur] = useState("");
 
-  const pointer = async (p) => {
+  const modifier = async (p, champs) => {
     setErreur("");
-    try { const r = await appel("paiement-pointer", { id: p.id, pointe: !p.pointe }); onChange(paiements.map((x) => (x.id === p.id ? r.paiement : x))); }
+    try { const r = await appel("paiement-modifier", { id: p.id, ...champs }); onChange(paiements.map((x) => (x.id === p.id ? r.paiement : x))); }
     catch (err) { setErreur(MESSAGES[err.code] || MESSAGES.base); }
   };
   const supprimer = async (p) => {
@@ -453,39 +454,161 @@ function VuePaiements({ demandes, paiements, onChange }) {
 
   return (
     <div className="grid gap-4">
-      <div className="grid grid-cols-2 gap-3 md:max-w-[520px]">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:max-w-[780px]">
         <Indicateur valeur={gnf(duMois.reduce((s, p) => s + p.montant, 0))} libelle={`Encaissé en ${MOIS_LONGS[new Date().getMonth()]}`} argent />
-        <Indicateur valeur={duMois.length} libelle="Acomptes ce mois" />
+        <Indicateur valeur={duMois.length} libelle="Acomptes confirmés ce mois" />
+        <Indicateur valeur={aVerifier} libelle="Déclarés sur le site, à vérifier" />
       </div>
+      {aVerifier ? (
+        <p className="rounded-lg border border-[#f0c766]/50 bg-[#f0c766]/10 px-4 py-3 text-[13.5px] text-[#f0c766]">
+          {aVerifier} paiement{aVerifier > 1 ? "s" : ""} déclaré{aVerifier > 1 ? "s" : ""} par des clients sur le site. Retrouvez le numéro de transaction dans les SMS Orange Money reçus, puis passez le statut à « Confirmé » (ou « Refusé » s’il est introuvable).
+        </p>
+      ) : null}
       <FormPaiement demandes={demandes} onAjoute={(p) => onChange([p, ...paiements].sort((a, b) => (a.date < b.date ? 1 : -1)))} />
       {erreur ? <p role="alert" className="text-[13px] text-danger">{erreur}</p> : null}
       <Carte className="overflow-x-auto p-0">
-        <table className="w-full min-w-[760px] border-collapse text-[13.5px] tabular-nums">
-          <thead><tr className="text-left text-[11.5px] tracking-[0.08em] uppercase text-sand-soft">{["Date", "Client", "Référence", "Montant", "Moyen", "Statut", "Pointé", ""].map((h, i) => <th key={i} className="border-b border-line px-4 py-3 font-semibold">{h}</th>)}</tr></thead>
+        <table className="w-full min-w-[920px] border-collapse text-[13.5px] tabular-nums">
+          <thead><tr className="text-left text-[11.5px] tracking-[0.08em] uppercase text-sand-soft">{["Date", "Client", "Référence · transaction", "Montant", "Moyen", "Statut", "Pointé", ""].map((h, i) => <th key={i} className="border-b border-line px-4 py-3 font-semibold">{h}</th>)}</tr></thead>
           <tbody>
             {paiements.length ? paiements.map((p) => (
-              <tr key={p.id} className="border-b border-line last:border-b-0">
-                <td className="px-4 py-3 whitespace-nowrap">{fmtJour(p.date)}</td>
-                <td className="px-4 py-3">{p.client}{p.notes ? <span className="block text-[12px] text-sand-soft">{p.notes}</span> : null}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{p.reference}</td>
-                <td className="px-4 py-3 text-right whitespace-nowrap">{gnf(p.montant)}</td>
-                <td className="px-4 py-3">{p.moyen}</td>
-                <td className="px-4 py-3">{p.statut}</td>
-                <td className="px-4 py-3"><label className="inline-flex cursor-pointer items-center gap-2"><input type="checkbox" checked={p.pointe} onChange={() => pointer(p)} className="h-4 w-4 accent-[var(--color-palm)]" /><span className="text-[12.5px] text-sand-soft">{p.pointe ? "Vérifié" : "À vérifier"}</span></label></td>
-                <td className="px-4 py-3 text-right"><button type="button" onClick={() => supprimer(p)} aria-label="Supprimer ce paiement" className="cursor-pointer text-sand-soft hover:text-danger"><Icon name="x" className="h-4 w-4" /></button></td>
+              <tr key={p.id} className={`border-b border-line last:border-b-0 ${p.statut === "En attente" ? "bg-[#f0c766]/[0.06]" : ""}`}>
+                <td className="px-4 py-3 align-top whitespace-nowrap">{fmtJour(p.date)}{p.origine === "site" ? <span className="mt-1 block w-fit rounded-full bg-sky/15 px-2 py-0.5 text-[11px] font-semibold text-sky">Déclaré sur le site</span> : null}</td>
+                <td className="px-4 py-3 align-top">{p.client}<span className="block text-[12px] text-sand-soft">{[p.telephone, p.email].filter(Boolean).join(" · ")}</span>{p.notes ? <span className="block text-[12px] text-sand-soft">{p.notes}</span> : null}</td>
+                <td className="px-4 py-3 align-top">{p.reference || <span className="text-sand-soft">—</span>}{p.transaction ? <span className="block font-mono text-[12px] text-sand-soft">{p.transaction}</span> : null}</td>
+                <td className="px-4 py-3 text-right align-top whitespace-nowrap">{gnf(p.montant)}</td>
+                <td className="px-4 py-3 align-top">{p.moyen}</td>
+                <td className="w-[170px] px-4 py-2.5 align-top"><Liste value={p.statut} onChange={(e) => modifier(p, { statut: e.target.value })} options={STATUTS_PAIEMENT} /></td>
+                <td className="px-4 py-3 align-top"><label className="inline-flex cursor-pointer items-center gap-2"><input type="checkbox" checked={p.pointe} onChange={() => modifier(p, { pointe: !p.pointe })} className="h-4 w-4 accent-[var(--color-palm)]" /><span className="text-[12.5px] text-sand-soft">{p.pointe ? "Vérifié" : "À vérifier"}</span></label></td>
+                <td className="px-4 py-3 text-right align-top"><button type="button" onClick={() => supprimer(p)} aria-label="Supprimer ce paiement" className="cursor-pointer text-sand-soft hover:text-danger"><Icon name="x" className="h-4 w-4" /></button></td>
               </tr>
             )) : <tr><td colSpan={8} className="px-4 py-5 text-sand-soft">Aucun paiement enregistré.</td></tr>}
           </tbody>
         </table>
       </Carte>
-      <p className="text-[13px] text-sand-soft">« Pointé » : cochez une fois le paiement vérifié dans CinetPay ou sur le relevé Orange Money. Seuls les paiements au statut « Confirmé » comptent dans les totaux.</p>
+      <p className="text-[13px] text-sand-soft">Seuls les paiements au statut « Confirmé » comptent dans les totaux. « Pointé » : cochez une fois le paiement retrouvé dans CinetPay ou sur le relevé Orange Money.</p>
+    </div>
+  );
+}
+
+/* ---------- Historique ---------- */
+
+const libelleMois = (m) => { const [a, mm] = m.split("-"); return `${MOIS_LONGS[Number(mm) - 1]} ${a}`; };
+const decalerMois = (m, n) => { const [a, mm] = m.split("-").map(Number); const d = new Date(Date.UTC(a, mm - 1 + n, 1)); return d.toISOString().slice(0, 7); };
+const fmtQuand = (iso) => new Date(iso).toLocaleString("fr-FR", { timeZone: "Africa/Conakry", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+const TON_ACTION = (a) => (/supprim|Refus/.test(a) ? "text-danger" : /reçue|déclaré/.test(a) ? "text-sky" : /Paiement|pointé/i.test(a) ? "text-palm" : "text-sand");
+
+function VueHistorique() {
+  const actuel = new Date().toISOString().slice(0, 7);
+  const [mois, setMois] = useState(actuel);
+  const [h, setH] = useState(null);
+  const [erreur, setErreur] = useState("");
+  const [filtre, setFiltre] = useState("tout");
+  const [recherche, setRecherche] = useState("");
+
+  useEffect(() => {
+    let actif = true;
+    setErreur("");
+    appel("historique", { mois }).then((r) => { if (actif) setH(r); }).catch((err) => { if (actif) setErreur(MESSAGES[err.code] || MESSAGES.base); });
+    return () => { actif = false; };
+  }, [mois]);
+
+  const q = recherche.trim().toLowerCase();
+  const journal = (h?.journal || [])
+    .filter((e) => filtre === "tout" || e.objet === filtre)
+    .filter((e) => !q || `${e.action} ${e.resume}`.toLowerCase().includes(q));
+  const th = "border-b border-line px-4 py-3 text-left text-[11.5px] font-semibold tracking-[0.08em] uppercase text-sand-soft";
+  const td = "border-b border-line px-4 py-2.5 align-top";
+
+  return (
+    <div className="grid gap-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" onClick={() => setMois((m) => decalerMois(m, -1))} aria-label="Mois précédent" className={`${btn} border-line text-sand`}><Icon name="arrow" className="h-4 w-4 rotate-180" /></button>
+        <h2 className="min-w-[180px] text-center text-[20px] font-extrabold capitalize">{libelleMois(mois)}</h2>
+        <button type="button" onClick={() => setMois((m) => decalerMois(m, 1))} disabled={mois >= actuel} aria-label="Mois suivant" className={`${btn} border-line text-sand`}><Icon name="arrow" className="h-4 w-4" /></button>
+        {h?.moisDispo?.length > 1 ? (
+          <div className="w-[200px]"><Liste value={mois} onChange={(e) => setMois(e.target.value)} options={h.moisDispo} /></div>
+        ) : null}
+        <button type="button" onClick={() => window.print()} className={`${btn} ml-auto border-line text-sand-soft hover:text-sand print:hidden`}>Imprimer ce mois</button>
+      </div>
+      {erreur ? <p role="alert" className="text-[13px] text-danger">{erreur}</p> : null}
+      {!h ? <p className="text-sand-soft">Chargement…</p> : (
+        <>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+            <Indicateur valeur={h.resume.demandes} libelle="Demandes reçues" />
+            <Indicateur valeur={h.resume.confirmees} libelle="Confirmées ou avec acompte" />
+            <Indicateur valeur={h.resume.annulees} libelle="Annulées" />
+            <Indicateur valeur={h.resume.paiements} libelle="Acomptes confirmés" />
+            <Indicateur valeur={gnf(h.resume.encaisse)} libelle="Encaissé" argent />
+          </div>
+
+          <Carte className="overflow-x-auto p-0">
+            <h3 className="px-4 pt-4 text-[15px] font-bold">Demandes reçues en {libelleMois(mois)}</h3>
+            <table className="mt-2 w-full min-w-[760px] border-collapse text-[13.5px] tabular-nums">
+              <thead><tr>{["Reçue le", "Client", "Événement", "Date souhaitée", "Devis", "Statut"].map((x) => <th key={x} className={th}>{x}</th>)}</tr></thead>
+              <tbody>
+                {h.demandes.length ? h.demandes.map((d) => (
+                  <tr key={d.id}>
+                    <td className={`${td} whitespace-nowrap`}>{fmtRecue(d.recue)}</td>
+                    <td className={td}>{d.nom}{d.org ? <span className="block text-[12px] text-sand-soft">{d.org}</span> : null}</td>
+                    <td className={td}>{d.type}{d.nb ? <span className="block text-[12px] text-sand-soft">{d.nb} pers. · {d.duree}</span> : null}</td>
+                    <td className={`${td} whitespace-nowrap`}>{fmtJour(d.date)}</td>
+                    <td className={`${td} whitespace-nowrap`}>{d.devis ? gnf(d.devis) : <span className="text-sand-soft">—</span>}</td>
+                    <td className={td}><Pastille statut={d.statut} /></td>
+                  </tr>
+                )) : <tr><td colSpan={6} className="px-4 py-4 text-sand-soft">Aucune demande reçue ce mois-là.</td></tr>}
+              </tbody>
+            </table>
+          </Carte>
+
+          <Carte className="overflow-x-auto p-0">
+            <h3 className="px-4 pt-4 text-[15px] font-bold">Paiements de {libelleMois(mois)}</h3>
+            <table className="mt-2 w-full min-w-[760px] border-collapse text-[13.5px] tabular-nums">
+              <thead><tr>{["Date", "Client", "Référence · transaction", "Montant", "Moyen", "Statut"].map((x) => <th key={x} className={th}>{x}</th>)}</tr></thead>
+              <tbody>
+                {h.paiements.length ? h.paiements.map((p) => (
+                  <tr key={p.id}>
+                    <td className={`${td} whitespace-nowrap`}>{fmtJour(p.date)}</td>
+                    <td className={td}>{p.client}</td>
+                    <td className={td}>{p.reference}{p.transaction ? <span className="block font-mono text-[12px] text-sand-soft">{p.transaction}</span> : null}</td>
+                    <td className={`${td} text-right whitespace-nowrap`}>{gnf(p.montant)}</td>
+                    <td className={td}>{p.moyen}</td>
+                    <td className={td}>{p.statut}{p.pointe ? <span className="ml-1.5 text-[12px] text-palm">· vérifié</span> : null}</td>
+                  </tr>
+                )) : <tr><td colSpan={6} className="px-4 py-4 text-sand-soft">Aucun paiement ce mois-là.</td></tr>}
+              </tbody>
+            </table>
+          </Carte>
+
+          <Carte className="grid gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="mr-auto text-[15px] font-bold">Journal des actions</h3>
+              {[["tout", "Tout"], ["demande", "Demandes"], ["paiement", "Paiements"]].map(([v, l]) => (
+                <button key={v} type="button" onClick={() => setFiltre(v)} aria-pressed={filtre === v} className={`cursor-pointer rounded-full border px-3 py-1.5 text-[13px] font-semibold ${filtre === v ? "border-gold bg-gold/10 text-gold" : "border-line text-sand-soft hover:text-sand"}`}>{l}</button>
+              ))}
+              <input type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher un nom…" className={`${CHAMP} md:w-[220px]`} />
+            </div>
+            {journal.length ? (
+              <ol className="grid">
+                {journal.map((e) => (
+                  <li key={e.id} className="grid gap-x-4 gap-y-0.5 border-t border-line py-2.5 text-[13.5px] first:border-t-0 md:grid-cols-[110px_210px_1fr]">
+                    <span className="text-sand-soft tabular-nums">{fmtQuand(e.quand)}</span>
+                    <span className={`font-semibold ${TON_ACTION(e.action)}`}>{e.action}</span>
+                    <span className="min-w-0 break-words">{e.resume}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : <p className="text-[13.5px] text-sand-soft">Aucune action enregistrée{filtre !== "tout" || q ? " pour ce filtre" : " ce mois-là"}.</p>}
+          </Carte>
+          <p className="text-[13px] text-sand-soft">Rien n’est effacé d’un mois sur l’autre : le tableau de bord montre le mois en cours, l’historique garde tous les mois. Le journal note chaque demande reçue, chaque changement de statut, de devis ou de note, chaque paiement et chaque suppression.</p>
+        </>
+      )}
     </div>
   );
 }
 
 /* ---------- Page ---------- */
 
-const ONGLETS = [["tableau", "Tableau de bord"], ["demandes", "Demandes"], ["paiements", "Paiements"]];
+const ONGLETS = [["tableau", "Tableau de bord"], ["demandes", "Demandes"], ["paiements", "Paiements"], ["historique", "Historique"]];
 
 export default function Admin() {
   useTitle("Administration · Camayenne Plage");
@@ -561,6 +684,7 @@ export default function Admin() {
           {ONGLETS.map(([id, libelle]) => (
             <button key={id} type="button" role="tab" aria-selected={onglet === id} onClick={() => setOnglet(id)} className={`cursor-pointer border-b-2 px-3.5 py-2.5 text-[14px] font-semibold whitespace-nowrap transition-colors ${onglet === id ? "border-gold text-gold" : "border-transparent text-sand-soft hover:text-sand"}`}>
               {libelle}{id === "demandes" ? <span className="ml-1.5 tabular-nums opacity-70">{donnees.demandes.filter((d) => d.statut === "Nouvelle").length || ""}</span> : null}
+              {id === "paiements" && donnees.paiements.some((p) => p.statut === "En attente") ? <span className="ml-1.5 rounded-full bg-[#f0c766]/20 px-1.5 text-[12px] text-[#f0c766] tabular-nums">{donnees.paiements.filter((p) => p.statut === "En attente").length}</span> : null}
             </button>
           ))}
         </nav>
@@ -570,6 +694,7 @@ export default function Admin() {
         {onglet === "tableau" && <VueTableau demandes={donnees.demandes} paiements={donnees.paiements} />}
         {onglet === "demandes" && <VueDemandes demandes={donnees.demandes} onEnregistre={remplacer} onSupprime={retirer} />}
         {onglet === "paiements" && <VuePaiements demandes={donnees.demandes} paiements={donnees.paiements} onChange={paiementsChanges} />}
+        {onglet === "historique" && <VueHistorique />}
       </main>
     </div>
   );

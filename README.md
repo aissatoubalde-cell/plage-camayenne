@@ -82,7 +82,8 @@ Adresse : `/admin` (pas de lien sur le site, page non indexée). Chaque demande 
 
 - **Connexion** : mot de passe d’équipe `ADMIN_PASSWORD` (Vercel). 8 essais ratés au plus par quart d’heure et par adresse IP ; on reste connecté 30 jours. Changer le mot de passe dans Vercel puis redéployer déconnecte tout le monde.
 - **Demandes** : statut, montant du devis, notes, suppression. Au passage à « Confirmé », deux boutons ouvrent un e-mail ou un message WhatsApp de confirmation déjà rédigé, envoyé depuis la messagerie de l’équipe.
-- **Paiements** : saisie des acomptes reçus, case « Pointé » une fois vérifiés chez CinetPay ou Orange Money.
+- **Paiements** : saisie des acomptes reçus, statut modifiable, case « Pointé » une fois vérifiés chez CinetPay ou Orange Money. En mode manuel Orange Money (sans clés CinetPay), le client déclare son acompte sur la page Paiement avec le **numéro de transaction du SMS** : il arrive ici « En attente » (badge « Déclaré sur le site ») jusqu’à vérification (`/api/paiement-declare`). WhatsApp reste proposé en option.
+- **Historique** : un mois à la fois (résumé, demandes reçues, paiements, journal de toutes les actions : demande reçue, statut, devis, notes, confirmation, paiement, suppression). Rien n’est effacé : le tableau de bord montre le mois en cours, l’historique tous les mois. Bouton « Imprimer ce mois ».
 - **Base** : PostgreSQL Neon, créée depuis Vercel (*Storage*), qui fournit `DATABASE_URL`. Les tables se créent seules au premier appel. En local : `DATABASE_URL=pglite` lance une base embarquée en mémoire (vidée à chaque redémarrage).
 
 ## Variables d’environnement
