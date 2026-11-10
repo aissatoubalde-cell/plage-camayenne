@@ -143,9 +143,12 @@ function formaterLigneDemande(feuille, ligne) {
 
 function installer() {
   const classeur = SpreadsheetApp.getActive();
-  classeur.setSpreadsheetLocale("fr_FR");
+  // Les formules sont écrites avec des virgules : la feuille passe en anglais le temps de les poser,
+  // puis revient en français (Google convertit alors les virgules en points-virgules à l'affichage).
+  classeur.setSpreadsheetLocale("en_US");
+  SpreadsheetApp.flush();
   classeur.setSpreadsheetTimeZone("Africa/Conakry");
-  if (/^(Feuille sans titre|Untitled spreadsheet)/.test(classeur.getName())) {
+  if (/^(Feuille sans titre|Feuille de calcul sans titre|Untitled spreadsheet)/.test(classeur.getName())) {
     classeur.rename("Suivi Camayenne Plage · demandes et acomptes");
   }
 
@@ -161,6 +164,8 @@ function installer() {
     if ([ONGLET_BORD, ONGLET_DEMANDES, ONGLET_PAIEMENTS].indexOf(f.getName()) < 0 && f.getLastRow() === 0) classeur.deleteSheet(f);
   });
   classeur.setActiveSheet(bord);
+  SpreadsheetApp.flush();
+  classeur.setSpreadsheetLocale("fr_FR");
 
   // Le message ne peut s'afficher que si la feuille est ouverte dans le même compte ; sinon, il va dans le journal.
   const texteFin = "Les onglets Tableau de bord, Demandes et Paiements sont prêts. Étape suivante : Déployer → Nouveau déploiement → Application Web (voir LISEZMOI.md).";
@@ -236,21 +241,23 @@ function preparerBord(classeur) {
   f.clear();
   f.getCharts().forEach((c) => f.removeChart(c));
   f.setHiddenGridlines(true);
-  [24, 230, 150, 24, 110, 220, 170, 90, 150, 140].forEach((l, i) => f.setColumnWidth(i + 1, l));
+  [24, 250, 150, 24, 110, 220, 170, 90, 150, 140].forEach((l, i) => f.setColumnWidth(i + 1, l));
 
   const debutMois = "EOMONTH(TODAY(),-1)+1";
+  const MOIS = '"janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."';
   const D = ONGLET_DEMANDES + "!";
   const P = ONGLET_PAIEMENTS + "!";
 
   f.getRange("B1").setValue("Suivi Camayenne Plage").setFontSize(18).setFontWeight("bold");
-  f.getRange("B2").setFormula('="Mois en cours · au "&TEXT(TODAY(),"dd/mm/yyyy")').setFontColor("#5f6f69");
+  // Dates mises en texte sans code de format (« dd/mm/yyyy » ne se lit pas pareil selon la langue de la feuille)
+  f.getRange("B2").setFormula('="Mois en cours · au "&TEXT(DAY(TODAY()),"00")&"/"&TEXT(MONTH(TODAY()),"00")&"/"&YEAR(TODAY())').setFontColor("#5f6f69");
 
   // Indicateurs du mois
   const kpis = [
     ["Demandes reçues ce mois", "=COUNTIFS(" + D + "A2:A,\">=\"&" + debutMois + ")"],
-    ["En attente de réponse (Nouvelle, Contacté)", "=COUNTIF(" + D + "M2:M,\"Nouvelle\")+COUNTIF(" + D + "M2:M,\"Contacté\")"],
+    ["En attente de réponse", "=COUNTIF(" + D + "M2:M,\"Nouvelle\")+COUNTIF(" + D + "M2:M,\"Contacté\")"],
     ["Devis envoyés, sans réponse", "=COUNTIF(" + D + "M2:M,\"Devis envoyé\")"],
-    ["Événements confirmés ou avec acompte", "=COUNTIF(" + D + "M2:M,\"Confirmé\")+COUNTIF(" + D + "M2:M,\"Acompte reçu\")"],
+    ["Confirmés ou avec acompte", "=COUNTIF(" + D + "M2:M,\"Confirmé\")+COUNTIF(" + D + "M2:M,\"Acompte reçu\")"],
     ["Acomptes encaissés ce mois (GNF)", "=SUMIFS(" + P + "D2:D," + P + "A2:A,\">=\"&" + debutMois + ")"],
   ];
   f.getRange("B4").setValue("Indicateurs").setFontWeight("bold").setFontColor(VERT);
@@ -270,8 +277,8 @@ function preparerBord(classeur) {
     const decalage = 5 - i;
     const debut = "(EOMONTH(TODAY()," + (-decalage - 1) + ")+1)";
     const fin = "(EOMONTH(TODAY()," + -decalage + ")+1)";
-    // Libellé en texte (« novembre 2026 ») pour que le graphique affiche une barre par mois
-    f.getRange(r, 2).setFormula("=TEXT(" + debut + ",\"mmmm yyyy\")");
+    // Libellé en texte (« nov. 2026 ») pour que le graphique affiche une barre par mois
+    f.getRange(r, 2).setFormula("=CHOOSE(MONTH(" + debut + ")," + MOIS + ")&\" \"&YEAR(" + debut + ")");
     f.getRange(r, 3).setFormula("=COUNTIFS(" + D + "A2:A,\">=\"&" + debut + "," + D + "A2:A,\"<\"&" + fin + ")");
   }
   const graphique = f.newChart().asColumnChart()
@@ -290,7 +297,7 @@ function preparerBord(classeur) {
   // Par type d'événement, 6 derniers mois
   f.getRange("B36").setValue("Par type d'événement · 6 derniers mois").setFontWeight("bold").setFontColor(VERT);
   f.getRange("B37").setFormula(
-    "=IFERROR(QUERY(" + D + "A2:F,\"select F, count(F) where A >= date '\"&TEXT(EOMONTH(TODAY(),-6)+1,\"yyyy-mm-dd\")&\"' and F is not null group by F order by count(F) desc label F 'Événement', count(F) 'Demandes'\",0),\"Aucune demande\")",
+    "=IFERROR(QUERY(" + D + "A2:F,\"select F, count(F) where A >= date '\"&YEAR(EOMONTH(TODAY(),-6)+1)&\"-\"&TEXT(MONTH(EOMONTH(TODAY(),-6)+1),\"00\")&\"-01' and F is not null group by F order by count(F) desc label F 'Événement', count(F) 'Demandes'\",0),\"Aucune demande\")",
   );
   f.getRange("B37:C37").setFontWeight("bold").setBackground(FOND_ENTETE);
 
