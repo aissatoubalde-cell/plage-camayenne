@@ -35,6 +35,7 @@ export const espaces = [
     photos: [
       ["salle", "Salle de conférence"],
       ["salle-expo", "La salle aménagée pour une exposition-vente"],
+      ["salle-reception", "La salle dressée pour un dîner de gala avec orchestre"],
     ],
     text: "Climatisée, mobilier de conférence, vidéoprojecteur et sonorisation. Réunions, formations, séminaires." },
   { n: "02", photo: "exterieur", alt: "Espaces extérieurs", title: "Espaces extérieurs",
