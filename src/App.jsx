@@ -1,6 +1,6 @@
 import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
-import { useEffect } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Suspense, lazy, useEffect } from "react";
+import { Route, Routes, useLocation } from "react-router-dom";
 import Footer from "./components/Footer";
 import Header from "./components/Header";
 import WhatsAppButton from "./components/WhatsAppButton";
@@ -11,6 +11,9 @@ import Devis from "./pages/Devis";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import Paiement from "./pages/Paiement";
+
+// Chargée à part : le code de l’administration n’alourdit pas le site public.
+const Admin = lazy(() => import("./pages/Admin"));
 
 function ScrollManager() { useScrollToHash(); return null; }
 
@@ -26,6 +29,15 @@ function Analytics() {
 }
 
 export default function App() {
+  const { pathname } = useLocation();
+  // L'administration a sa propre mise en page, sans l'en-tête ni le pied de page du site.
+  if (pathname.replace(/\/$/, "") === "/admin") {
+    return (
+      <LazyMotion features={domAnimation} strict>
+        <Suspense fallback={null}><Admin /></Suspense>
+      </LazyMotion>
+    );
+  }
   return (
     <LazyMotion features={domAnimation} strict>
       <MotionConfig reducedMotion="user">

@@ -63,6 +63,16 @@ Le lien de la feuille ne fonctionne que pour les personnes invitées ; laisser *
 - Acompte reçu : ajouter une ligne dans **Paiements** (date, client, référence, montant, moyen), puis cocher **Pointé** après vérification dans CinetPay ou Orange Money.
 - Le **Tableau de bord** se met à jour tout seul.
 
+## Page d'administration du site (/admin)
+
+En plus de la feuille, l'équipe dispose d'une page web : **https://plage-camayenne.vercel.app/admin** (tableau de bord, liste des demandes avec changement de statut, montant et notes, paiements). Elle lit et modifie cette même feuille ; rien n'est stocké ailleurs.
+
+- **Connexion** : on saisit son adresse e-mail, on reçoit un code à 6 chiffres (valable 10 minutes, 5 essais), puis on reste connecté 30 jours sur cet appareil. Seules les adresses listées dans la variable Vercel `ADMIN_EMAILS` reçoivent un code.
+- **Ajouter ou retirer quelqu'un** : modifier `ADMIN_EMAILS` dans Vercel (adresses séparées par des virgules), puis redéployer. Une adresse retirée perd l'accès immédiatement après le redéploiement.
+- **Clé secrète** : `ADMIN_SECRET` (Vercel) doit être identique à la clé enregistrée dans le script (`ADMIN_SECRET_COLLE`, rangée dans les propriétés du script par `installer`). Sans elle, le script refuse toute lecture ou modification.
+- Passer une demande à « Confirmé » depuis la page envoie l'e-mail de confirmation au client, comme dans la feuille.
+- Après une modification du script : **Déployer → Gérer les déploiements → crayon → Version : Nouvelle version → Déployer** (l'adresse /exec ne change pas).
+
 ## Si on modifie le script plus tard
 
 Après toute modification de `suivi.gs` dans Apps Script : **Déployer → Gérer les déploiements → crayon → Version : Nouvelle version → Déployer**. L'URL reste la même, rien à changer côté site.

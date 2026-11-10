@@ -10,6 +10,8 @@
  *   en haut de l'onglet Demandes.
  * - quandStatutChange(e) : quand une demande passe à « Confirmé », envoie un e-mail de confirmation au client
  *   (déclencheur installé par installer()).
+ * - actionAdmin(d) : lecture et modification des demandes pour la page /admin du site, et codes de connexion.
+ *   Chaque appel doit porter la clé secrète ADMIN_SECRET, connue seulement du serveur du site (Vercel).
  *
  * Les formules sont écrites en syntaxe anglaise (virgules) : c'est ce qu'attend Apps Script,
  * Google Sheets les affiche ensuite en français.
@@ -48,6 +50,11 @@ const FOND_ENTETE = "#f3f5f4";
 const MAX_PAR_HEURE = 30;
 const MAX_LONGUEUR = 3000;
 
+// Clé partagée avec le serveur du site (variable ADMIN_SECRET dans Vercel). Collée ici une seule fois :
+// installer() la range dans les propriétés du script, on peut ensuite recoller une version où elle est vide.
+const ADMIN_SECRET_COLLE = "";
+const MAX_ESSAIS_CODE = 5;
+
 // E-mail de confirmation envoyé au client quand le statut passe à « Confirmé »
 const STATUT_CONFIRME = "Confirmé";
 const CONTACT = {
@@ -66,6 +73,7 @@ function doPost(e) {
   const verrou = LockService.getScriptLock();
   try {
     const d = JSON.parse((e && e.postData && e.postData.contents) || "{}");
+    if (d.action) return repondre(actionAdmin(d));
 
     // Piège à robots du formulaire, et champs minimum
     if (d.botcheck) return repondre({ ok: true });
@@ -179,6 +187,7 @@ function installer() {
   SpreadsheetApp.flush();
   classeur.setSpreadsheetLocale("fr_FR");
   installerDeclencheur(classeur);
+  if (ADMIN_SECRET_COLLE) PropertiesService.getScriptProperties().setProperty("ADMIN_SECRET", ADMIN_SECRET_COLLE);
 
   // Le message ne peut s'afficher que si la feuille est ouverte dans le même compte ; sinon, il va dans le journal.
   const texteFin = "Les onglets Tableau de bord, Demandes et Paiements sont prêts. Étape suivante : Déployer → Nouveau déploiement → Application Web (voir LISEZMOI.md).";
@@ -438,17 +447,23 @@ function quandStatutChange(e) {
   if (feuille.getName() !== ONGLET_DEMANDES || cellule.getColumn() !== COL_STATUT || cellule.getRow() < 2) return;
   if (cellule.getNumRows() !== 1 || cellule.getNumColumns() !== 1) return;
   if (e.value !== STATUT_CONFIRME || e.oldValue === STATUT_CONFIRME) return;
-  if (/Confirmation envoyée/.test(cellule.getNote())) return;
+  confirmerLigne(feuille, cellule.getRow());
+}
 
-  const v = feuille.getRange(cellule.getRow(), 1, 1, COLONNES_DEMANDES.length).getValues()[0];
+/** Envoie la confirmation de la ligne si ce n'est pas déjà fait ; renvoie true si un e-mail est parti. */
+function confirmerLigne(feuille, ligne) {
+  const cellule = feuille.getRange(ligne, COL_STATUT);
+  if (/Confirmation envoyée/.test(cellule.getNote())) return false;
+  const v = feuille.getRange(ligne, 1, 1, COLONNES_DEMANDES.length).getValues()[0];
   const demande = { nom: v[1], email: String(v[2]).trim(), type: v[5], date: v[6], nb: v[7], duree: v[8], espaces: v[9], devis: v[13] };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(demande.email)) {
     cellule.setNote("Confirmation non envoyée : adresse e-mail du client invalide.");
-    return;
+    return false;
   }
   envoyerConfirmation(demande, demande.email);
   const quand = Utilities.formatDate(new Date(), "Africa/Conakry", "dd/MM/yyyy à HH:mm");
   cellule.setNote("Confirmation envoyée au client le " + quand + " (" + demande.email + ").");
+  return true;
 }
 
 function envoyerConfirmation(d, destinataire) {
@@ -492,6 +507,107 @@ function envoyerConfirmation(d, destinataire) {
     name: CONTACT.nom,
     replyTo: CONTACT.email,
   });
+}
+
+/* ======================================================================
+ * API de la page /admin du site
+ * ==================================================================== */
+
+function actionAdmin(d) {
+  const secret = PropertiesService.getScriptProperties().getProperty("ADMIN_SECRET") || ADMIN_SECRET_COLLE;
+  if (!secret || typeof d.secret !== "string" || d.secret !== secret) return { ok: false, erreur: "refuse" };
+  switch (d.action) {
+    case "lister": return { ok: true, demandes: lireDemandes(), paiements: lirePaiements() };
+    case "modifier": return modifierDemande(d);
+    case "code-envoyer": return envoyerCode(String(d.email || "").trim().toLowerCase());
+    case "code-verifier": return verifierCode(String(d.email || "").trim().toLowerCase(), String(d.code || "").trim());
+    default: return { ok: false, erreur: "action" };
+  }
+}
+
+const iso = (v) => (v instanceof Date ? v.toISOString() : "");
+
+function lireDemandes() {
+  const f = SpreadsheetApp.getActive().getSheetByName(ONGLET_DEMANDES);
+  const n = f.getLastRow() - 1;
+  if (n < 1) return [];
+  const plage = f.getRange(2, 1, n, COLONNES_DEMANDES.length);
+  const notes = f.getRange(2, COL_STATUT, n, 1).getNotes();
+  return plage.getValues().map((v, i) => ({
+    id: v[0] instanceof Date ? v[0].getTime() : null,
+    recue: iso(v[0]), nom: v[1], email: v[2], org: v[3], tel: String(v[4]), type: v[5], date: iso(v[6]),
+    nb: v[7], duree: v[8], espaces: v[9], services: v[10], message: v[11], statut: v[12], devis: v[13], notes: v[14],
+    confirmation: notes[i][0] || "",
+  })).filter((d) => d.id);
+}
+
+function lirePaiements() {
+  const f = SpreadsheetApp.getActive().getSheetByName(ONGLET_PAIEMENTS);
+  const n = f.getLastRow() - 1;
+  if (n < 1) return [];
+  return f.getRange(2, 1, n, COLONNES_PAIEMENTS.length).getValues()
+    .filter((v) => v[0] instanceof Date || v[1] || v[3])
+    .map((v) => ({ date: iso(v[0]), client: v[1], reference: v[2], montant: Number(v[3]) || 0, moyen: v[4], statut: v[5], pointe: v[6] === true, notes: v[7] }));
+}
+
+/** Change le statut, le montant du devis et les notes d'une demande (repérée par sa date de réception). */
+function modifierDemande(d) {
+  const verrou = LockService.getScriptLock();
+  verrou.waitLock(20000);
+  try {
+    const f = SpreadsheetApp.getActive().getSheetByName(ONGLET_DEMANDES);
+    const n = f.getLastRow() - 1;
+    if (n < 1) return { ok: false, erreur: "introuvable" };
+    const dates = f.getRange(2, 1, n, 1).getValues();
+    const i = dates.findIndex((v) => v[0] instanceof Date && v[0].getTime() === Number(d.id));
+    if (i < 0) return { ok: false, erreur: "introuvable" };
+    const ligne = i + 2;
+    const ancien = f.getRange(ligne, COL_STATUT).getValue();
+    if (d.statut !== undefined) {
+      if (STATUTS.indexOf(d.statut) < 0) return { ok: false, erreur: "statut" };
+      f.getRange(ligne, COL_STATUT).setValue(d.statut);
+    }
+    if (d.devis !== undefined) {
+      const montant = d.devis === "" || d.devis === null ? "" : Math.round(Number(d.devis));
+      if (montant !== "" && !(montant >= 0)) return { ok: false, erreur: "devis" };
+      f.getRange(ligne, COL_STATUT + 1).setValue(montant);
+    }
+    if (d.notes !== undefined) f.getRange(ligne, COL_STATUT + 2).setValue(texte(d.notes, 500));
+    // Une modification par script ne déclenche pas quandStatutChange : la confirmation est envoyée ici.
+    const email = d.statut === STATUT_CONFIRME && ancien !== STATUT_CONFIRME ? confirmerLigne(f, ligne) : false;
+    SpreadsheetApp.flush();
+    return { ok: true, emailEnvoye: email, demande: lireDemandes()[i] };
+  } finally {
+    verrou.releaseLock();
+  }
+}
+
+/** Code de connexion à 6 chiffres, valable 10 minutes, 5 essais au plus. */
+function envoyerCode(email) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return { ok: false, erreur: "email" };
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  CacheService.getScriptCache().put("code-" + email, JSON.stringify({ code: code, essais: 0 }), 600);
+  MailApp.sendEmail({
+    to: email,
+    subject: "Code de connexion " + code + " · Administration Camayenne Plage",
+    body: "Votre code de connexion à l'administration du site Camayenne Plage : " + code +
+      "\n\nIl est valable 10 minutes. Si vous n'avez pas demandé ce code, ignorez cet e-mail.",
+    name: CONTACT.nom,
+  });
+  return { ok: true };
+}
+
+function verifierCode(email, code) {
+  const cache = CacheService.getScriptCache();
+  const cle = "code-" + email;
+  const brut = cache.get(cle);
+  if (!brut) return { ok: false, erreur: "expire" };
+  const c = JSON.parse(brut);
+  c.essais += 1;
+  if (c.code === code) { cache.remove(cle); return { ok: true }; }
+  if (c.essais >= MAX_ESSAIS_CODE) { cache.remove(cle); return { ok: false, erreur: "essais" }; }
+  cache.put(cle, JSON.stringify(c), 600);
+  return { ok: false, erreur: "code" };
 }
 
 /** Envoie l'e-mail de confirmation d'exemple à votre propre adresse, pour voir à quoi il ressemble. */

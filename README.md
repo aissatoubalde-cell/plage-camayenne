@@ -12,6 +12,7 @@ Site de **Camayenne Plage**, complexe de loisirs et d’événementiel en bord d
 | Styles | Tailwind CSS 4 (jetons de couleurs et polices dans `@theme`) | `src/index.css`, classes dans les composants |
 | Formulaire de devis | Web3Forms (e-mail sans serveur), repli `mailto:` | `src/components/DevisForm.jsx` |
 | Tableau de bord des demandes | Google Sheets privé alimenté par Apps Script (`VITE_SHEET_URL`) | `tableau-de-bord/` (mode d’emploi dans `LISEZMOI.md`) |
+| Administration (/admin) | Page réservée à l’équipe, connexion par code e-mail, lit et modifie la feuille (`ADMIN_EMAILS`, `ADMIN_SECRET`) | `src/pages/Admin.jsx`, `netlify/functions/admin.mjs`, `api/admin.js` |
 | Bouton WhatsApp flottant | lien `wa.me` avec message pré-rempli | `src/components/WhatsAppButton.jsx` |
 | Carte | Google Maps intégrée (sans clé) + lien itinéraire | `src/components/Infos.jsx`, `src/config.js` |
 | Vidéo | lecteur Facebook chargé au clic | `src/components/Video.jsx` |
