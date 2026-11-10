@@ -26,7 +26,7 @@ export default function Hero() {
         {/* Entrée en cascade au chargement de la page */}
         <m.div variants={stagger(0.15, 0.12)} initial="hidden" animate="show" className="grid gap-7 pt-[clamp(72px,11vw,140px)] pb-[clamp(48px,6vw,72px)]">
           <AnimatedEyebrow inView={false} delay={0.1}>Plage · Loisirs · Événements · Conakry</AnimatedEyebrow>
-          <SplitWords as="h1" inView={false} delay={0.35} step={0.1} text="Camayenne Plage, *entre mer* et nature." className="text-[clamp(52px,9vw,112px)] leading-[0.96] font-extrabold tracking-[-0.035em]" />
+          <SplitWords as="h1" inView={false} delay={0.35} step={0.1} text="CAMAYENNE PLAGE, *entre mer* et nature." className="text-[clamp(52px,9vw,112px)] leading-[0.96] font-extrabold tracking-[-0.035em]" />
           <m.div variants={fadeUp} className="grid items-end gap-10 lg:grid-cols-[1fr_auto]">
             <p className="max-w-[46ch] text-[clamp(17px,1.7vw,19px)] text-sand-soft">
               Un complexe de loisirs et d’événementiel en bord de mer. Venez vous détendre en famille, ou organisez votre séminaire, votre team building ou votre réception face à l’océan.
