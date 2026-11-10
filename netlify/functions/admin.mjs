@@ -1,20 +1,15 @@
-// /api/admin : API de la page /admin (tableau de bord des demandes).
-// - Connexion par code à 6 chiffres envoyé par e-mail, réservée aux adresses de ADMIN_EMAILS.
-// - Session dans un cookie signé (HttpOnly, 30 jours), sans base de données.
-// - Les données restent dans la feuille Google : on les lit et on les modifie via son script (tableau-de-bord/suivi.gs),
-//   en joignant la clé ADMIN_SECRET que seul ce serveur connaît.
-//
-// Variables : ADMIN_EMAILS (adresses autorisées, séparées par des virgules), ADMIN_SECRET (même valeur que dans le script),
-// SHEET_URL (adresse /exec du script ; à défaut VITE_SHEET_URL).
+// /api/admin : API de la page /admin (demandes de devis et acomptes).
+// - Connexion par mot de passe d'équipe (ADMIN_PASSWORD), 8 essais ratés au plus par quart d'heure et par adresse IP.
+// - Session dans un cookie signé avec ADMIN_SECRET (HttpOnly, 30 jours).
+// - Données dans la base PostgreSQL (netlify/lib/demandes.mjs, variable DATABASE_URL).
 import crypto from "node:crypto";
+import {
+  ajouterPaiement, lister, modifierDemande, noterEchec, pointerPaiement, supprimerDemande, supprimerPaiement, tropDEssais, urlBase,
+} from "../lib/demandes.mjs";
 
 const COOKIE = "cp_admin";
 const DUREE_SESSION = 30 * 24 * 3600;
-
 const env = (k) => (process.env[k] || "").trim();
-const urlFeuille = () => env("SHEET_URL") || env("VITE_SHEET_URL");
-const autorises = () => env("ADMIN_EMAILS").toLowerCase().split(/[\s,;]+/).filter(Boolean);
-const normaliser = (email) => String(email || "").trim().toLowerCase();
 
 function json(obj, status = 200, headers = {}) {
   return new Response(JSON.stringify(obj), {
@@ -25,58 +20,37 @@ function json(obj, status = 200, headers = {}) {
 
 /* ---------- Session signée ---------- */
 
-const cleSession = () => crypto.createHmac("sha256", env("ADMIN_SECRET")).update("session-admin-camayenne").digest();
-const signer = (email, exp) => crypto.createHmac("sha256", cleSession()).update(`${email}|${exp}`).digest("base64url");
+// La signature dépend aussi du mot de passe : le changer dans Vercel déconnecte tout le monde.
+const cleSession = () => crypto.createHmac("sha256", env("ADMIN_SECRET")).update(`session|${env("ADMIN_PASSWORD")}`).digest();
+const signer = (exp) => crypto.createHmac("sha256", cleSession()).update(`equipe|${exp}`).digest("base64url");
 
-function creerCookie(email, secure) {
+function creerCookie(secure) {
   const exp = Math.floor(Date.now() / 1000) + DUREE_SESSION;
-  const valeur = `${Buffer.from(email).toString("base64url")}.${exp}.${signer(email, exp)}`;
-  return `${COOKIE}=${valeur}; Path=/api/admin; HttpOnly; SameSite=Strict; Max-Age=${DUREE_SESSION}${secure ? "; Secure" : ""}`;
+  return `${COOKIE}=${exp}.${signer(exp)}; Path=/api/admin; HttpOnly; SameSite=Strict; Max-Age=${DUREE_SESSION}${secure ? "; Secure" : ""}`;
 }
-
 const effacerCookie = (secure) => `${COOKIE}=; Path=/api/admin; HttpOnly; SameSite=Strict; Max-Age=0${secure ? "; Secure" : ""}`;
 
-function lireSession(request) {
+const egal = (a, b) => {
+  const x = Buffer.from(String(a)), y = Buffer.from(String(b));
+  return x.length === y.length && crypto.timingSafeEqual(x, y);
+};
+
+function sessionValide(request) {
   const brut = (request.headers.get("cookie") || "").split(/;\s*/).find((c) => c.startsWith(`${COOKIE}=`));
-  if (!brut) return null;
-  const [b64, exp, sig] = brut.slice(COOKIE.length + 1).split(".");
-  if (!b64 || !exp || !sig) return null;
-  const email = Buffer.from(b64, "base64url").toString();
-  const attendu = Buffer.from(signer(email, exp));
-  const recu = Buffer.from(sig);
-  if (attendu.length !== recu.length || !crypto.timingSafeEqual(attendu, recu)) return null;
-  if (Number(exp) < Date.now() / 1000) return null;
-  // Une adresse retirée de ADMIN_EMAILS perd l'accès tout de suite, même avec un cookie valide.
-  return autorises().includes(email) ? email : null;
+  if (!brut) return false;
+  const [exp, sig] = brut.slice(COOKIE.length + 1).split(".");
+  return Boolean(exp && sig && egal(signer(exp), sig) && Number(exp) > Date.now() / 1000);
 }
 
-/* ---------- Appel du script de la feuille ---------- */
-
-async function script(action, donnees = {}) {
-  const res = await fetch(urlFeuille(), {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action, secret: env("ADMIN_SECRET"), ...donnees }),
-    redirect: "follow",
-  });
-  const texte = await res.text();
-  try {
-    return JSON.parse(texte);
-  } catch {
-    throw new Error(`Réponse inattendue de la feuille (${res.status})`);
-  }
-}
+const adresseIp = (request) => (request.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "inconnue";
 
 /* ---------- Point d'entrée ---------- */
 
 export default async (request) => {
-  if (!env("ADMIN_SECRET") || !autorises().length || !urlFeuille()) return json({ erreur: "non-configure" }, 503);
+  if (!env("ADMIN_PASSWORD") || !env("ADMIN_SECRET") || !urlBase()) return json({ erreur: "non-configure" }, 503);
   const secure = new URL(request.url).protocol === "https:";
 
-  if (request.method === "GET") {
-    const email = lireSession(request);
-    return email ? json({ email }) : json({ erreur: "connexion" }, 401);
-  }
+  if (request.method === "GET") return sessionValide(request) ? json({ ok: true }) : json({ erreur: "connexion" }, 401);
   if (request.method !== "POST") return json({ erreur: "methode" }, 405);
 
   let d;
@@ -87,44 +61,34 @@ export default async (request) => {
   }
 
   try {
-    switch (d.action) {
-      case "envoyer-code": {
-        const email = normaliser(d.email);
-        // Même réponse que l'adresse soit autorisée ou non : la page ne révèle pas la liste.
-        if (autorises().includes(email)) {
-          const r = await script("code-envoyer", { email });
-          if (!r.ok) return json({ erreur: r.erreur || "envoi" }, 502);
-        }
-        return json({ ok: true });
+    if (d.action === "connexion") {
+      const ip = adresseIp(request);
+      if (await tropDEssais(ip)) return json({ erreur: "essais" }, 429);
+      if (!egal(String(d.motDePasse || ""), env("ADMIN_PASSWORD"))) {
+        await noterEchec(ip);
+        return json({ erreur: "mot-de-passe" }, 401);
       }
-      case "verifier-code": {
-        const email = normaliser(d.email);
-        const code = String(d.code || "").replace(/\D/g, "");
-        if (!autorises().includes(email) || code.length !== 6) return json({ ok: false, erreur: "code" }, 400);
-        const r = await script("code-verifier", { email, code });
-        if (!r.ok) return json({ ok: false, erreur: r.erreur || "code" }, 400);
-        return json({ ok: true, email }, 200, { "Set-Cookie": creerCookie(email, secure) });
-      }
-      case "deconnexion":
-        return json({ ok: true }, 200, { "Set-Cookie": effacerCookie(secure) });
+      return json({ ok: true }, 200, { "Set-Cookie": creerCookie(secure) });
     }
+    if (d.action === "deconnexion") return json({ ok: true }, 200, { "Set-Cookie": effacerCookie(secure) });
 
-    // Les actions suivantes demandent une session valide.
-    const email = lireSession(request);
-    if (!email) return json({ erreur: "connexion" }, 401);
-    if (d.action === "donnees") {
-      const r = await script("lister");
-      return r.ok ? json({ email, demandes: r.demandes, paiements: r.paiements }) : json({ erreur: r.erreur || "feuille" }, 502);
+    if (!sessionValide(request)) return json({ erreur: "connexion" }, 401);
+    const reponse = (r) => (r.erreur ? json(r, r.erreur === "introuvable" ? 404 : 400) : json(r));
+    switch (d.action) {
+      case "donnees": return json(await lister());
+      case "modifier": {
+        const champs = { id: d.id };
+        for (const k of ["statut", "devis", "notes", "confirmation"]) if (d[k] !== undefined) champs[k] = d[k];
+        return reponse(await modifierDemande(champs));
+      }
+      case "supprimer": return reponse(await supprimerDemande(d.id));
+      case "paiement-ajouter": return reponse(await ajouterPaiement(d));
+      case "paiement-pointer": return reponse(await pointerPaiement(d.id, d.pointe));
+      case "paiement-supprimer": return reponse(await supprimerPaiement(d.id));
+      default: return json({ erreur: "action" }, 400);
     }
-    if (d.action === "modifier") {
-      const champs = { id: d.id };
-      for (const k of ["statut", "devis", "notes"]) if (d[k] !== undefined) champs[k] = d[k];
-      const r = await script("modifier", champs);
-      return r.ok ? json(r) : json({ erreur: r.erreur || "feuille" }, 400);
-    }
-    return json({ erreur: "action" }, 400);
   } catch (e) {
     console.error(e);
-    return json({ erreur: "feuille" }, 502);
+    return json({ erreur: "base" }, 500);
   }
 };
