@@ -22,7 +22,7 @@ export const navOrganize = [
 ];
 
 export const stats = [
-  { value: "7", label: "Espaces" },
+  { value: "13", label: "Espaces" },
   { value: "5", label: "Formules" },
   { value: "6", label: "Prestations" },
   { value: "2023", label: "Ouverture" },
