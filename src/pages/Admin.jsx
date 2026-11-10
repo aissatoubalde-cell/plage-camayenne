@@ -71,6 +71,30 @@ function Pastille({ statut }) {
 
 const Carte = ({ className = "", children }) => <div className={`min-w-0 rounded-xl border border-line bg-card p-5 ${className}`}>{children}</div>;
 const Titre = ({ children }) => <h2 className="mb-4 text-[15px] font-bold tracking-[-0.005em]">{children}</h2>;
+// Champs de formulaire : même hauteur partout ; la liste déroulante perd le style natif de Safari et reçoit sa propre flèche.
+const CHAMP = "h-10 w-full min-w-0 rounded-lg border border-line bg-night px-3 text-[14px] text-sand placeholder:text-sand-soft/60 focus:border-gold focus:outline-none";
+const LIB = "text-[11.5px] leading-none font-semibold tracking-[0.08em] uppercase text-sand-soft";
+
+function Liste({ value, onChange, options }) {
+  return (
+    <span className="relative block">
+      <select value={value} onChange={onChange} className={`${CHAMP} cursor-pointer appearance-none pr-9`}>
+        {options.map((o) => <option key={o}>{o}</option>)}
+      </select>
+      <Icon name="chevron" className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-sand-soft" />
+    </span>
+  );
+}
+
+function Champ({ label, className = "", children }) {
+  return (
+    <label className={`grid min-w-0 content-end gap-2 ${className}`}>
+      <span className={LIB}>{label}</span>
+      {children}
+    </label>
+  );
+}
+
 const btn = "inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border px-3.5 py-2 text-[13.5px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 
 /* ---------- Connexion ---------- */
@@ -292,7 +316,6 @@ function CarteDemande({ d, onEnregistre, onSupprime }) {
 
   const tel = chiffresTel(d.tel);
   const texteConfirmation = messageConfirmation(d);
-  const champ = "rounded-lg border border-line bg-night px-3 py-2 text-[14px] text-sand focus:border-gold focus:outline-none";
   const lien = "inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[13.5px] font-semibold no-underline transition-colors";
   return (
     <Carte className="grid gap-4">
@@ -314,17 +337,17 @@ function CarteDemande({ d, onEnregistre, onSupprime }) {
         {tel ? <a href={`https://wa.me/${tel}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sand no-underline hover:text-gold"><Icon name="whatsapp" className="h-4 w-4" />WhatsApp</a> : null}
         {d.email ? <a href={`mailto:${d.email}`} className="inline-flex items-center gap-1.5 break-all text-sand no-underline hover:text-gold"><Icon name="mail" className="h-4 w-4" />{d.email}</a> : null}
       </div>
-      <div className="grid gap-3 border-t border-line pt-4 md:grid-cols-[180px_160px_1fr_auto] md:items-end">
-        <label className="grid gap-1.5"><span className="text-[11.5px] font-semibold tracking-[0.08em] uppercase text-sand-soft">Statut</span>
-          <select value={f.statut} onChange={(e) => setF((s) => ({ ...s, statut: e.target.value }))} className={champ}>{STATUTS.map((s) => <option key={s}>{s}</option>)}</select>
-        </label>
-        <label className="grid gap-1.5"><span className="text-[11.5px] font-semibold tracking-[0.08em] uppercase text-sand-soft">Devis (GNF)</span>
-          <input inputMode="numeric" value={f.devis ? Number(f.devis.replace(/\D/g, "")).toLocaleString("fr-FR") : ""} onChange={(e) => setF((s) => ({ ...s, devis: e.target.value.replace(/\D/g, "") }))} className={`${champ} tabular-nums`} placeholder="Montant" />
-        </label>
-        <label className="grid gap-1.5"><span className="text-[11.5px] font-semibold tracking-[0.08em] uppercase text-sand-soft">Notes</span>
-          <input value={f.notes} maxLength={500} onChange={(e) => setF((s) => ({ ...s, notes: e.target.value }))} className={champ} placeholder="Relancer jeudi, visite le 12…" />
-        </label>
-        <button type="button" onClick={enregistrer} disabled={!modifie || etat.attente} className={`${btn} border-transparent bg-gold text-night hover:bg-gold-deep`}>
+      <div className="grid grid-cols-2 gap-3 border-t border-line pt-4 md:grid-cols-[200px_190px_minmax(0,1fr)_auto] md:items-end">
+        <Champ label="Statut">
+          <Liste value={f.statut} onChange={(e) => setF((s) => ({ ...s, statut: e.target.value }))} options={STATUTS} />
+        </Champ>
+        <Champ label="Devis (GNF)">
+          <input inputMode="numeric" value={f.devis ? Number(f.devis.replace(/\D/g, "")).toLocaleString("fr-FR") : ""} onChange={(e) => setF((s) => ({ ...s, devis: e.target.value.replace(/\D/g, "") }))} className={`${CHAMP} tabular-nums`} placeholder="Montant" />
+        </Champ>
+        <Champ label="Notes" className="col-span-2 md:col-span-1">
+          <input value={f.notes} maxLength={500} onChange={(e) => setF((s) => ({ ...s, notes: e.target.value }))} className={CHAMP} placeholder="Relancer jeudi, visite le 12…" />
+        </Champ>
+        <button type="button" onClick={enregistrer} disabled={!modifie || etat.attente} className={`${btn} col-span-2 h-10 border-transparent bg-gold text-night hover:bg-gold-deep md:col-span-1`}>
           {etat.attente ? "Enregistrement…" : "Enregistrer"}
         </button>
       </div>
@@ -377,8 +400,6 @@ function FormPaiement({ demandes, onAjoute }) {
   const [f, setF] = useState(vide);
   const [etat, setEtat] = useState({ attente: false, erreur: "", message: "" });
   const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
-  const champ = "w-full rounded-lg border border-line bg-night px-3 py-2 text-[14px] text-sand focus:border-gold focus:outline-none";
-  const lib = "text-[11.5px] font-semibold tracking-[0.08em] uppercase text-sand-soft";
   const clients = [...new Set(demandes.map((d) => d.nom).filter(Boolean))];
 
   const ajouter = async (e) => {
@@ -397,15 +418,15 @@ function FormPaiement({ demandes, onAjoute }) {
   return (
     <Carte>
       <Titre>Ajouter un acompte reçu</Titre>
-      <form onSubmit={ajouter} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" noValidate>
-        <label className="grid gap-1.5"><span className={lib}>Date</span><input type="date" value={f.date} onChange={set("date")} className={`${champ} [color-scheme:dark]`} /></label>
-        <label className="grid gap-1.5"><span className={lib}>Client</span><input list="clients-admin" value={f.client} onChange={set("client")} className={champ} placeholder="Nom du client" /><datalist id="clients-admin">{clients.map((c) => <option key={c} value={c} />)}</datalist></label>
-        <label className="grid gap-1.5"><span className={lib}>Montant (GNF)</span><input inputMode="numeric" value={f.montant ? Number(f.montant.replace(/\D/g, "")).toLocaleString("fr-FR") : ""} onChange={(e) => setF((s) => ({ ...s, montant: e.target.value.replace(/\D/g, "") }))} className={`${champ} tabular-nums`} placeholder="3 000 000" /></label>
-        <label className="grid gap-1.5"><span className={lib}>Moyen</span><select value={f.moyen} onChange={set("moyen")} className={champ}>{MOYENS.map((m) => <option key={m}>{m}</option>)}</select></label>
-        <label className="grid gap-1.5"><span className={lib}>Référence</span><input value={f.reference} onChange={set("reference")} className={champ} placeholder="N° de transaction, devis…" /></label>
-        <label className="grid gap-1.5"><span className={lib}>Statut</span><select value={f.statut} onChange={set("statut")} className={champ}>{STATUTS_PAIEMENT.map((m) => <option key={m}>{m}</option>)}</select></label>
-        <label className="grid gap-1.5 sm:col-span-2 lg:col-span-1"><span className={lib}>Notes</span><input value={f.notes} onChange={set("notes")} className={champ} /></label>
-        <div className="flex items-end"><button type="submit" disabled={etat.attente} className={`${btn} w-full border-transparent bg-gold py-2.5 text-night hover:bg-gold-deep`}>{etat.attente ? "Ajout…" : "Ajouter"}</button></div>
+      <form onSubmit={ajouter} className="grid gap-x-3 gap-y-4 sm:grid-cols-2 lg:grid-cols-4" noValidate>
+        <Champ label="Date"><input type="date" value={f.date} onChange={set("date")} className={`${CHAMP} [color-scheme:dark]`} /></Champ>
+        <Champ label="Client"><input list="clients-admin" value={f.client} onChange={set("client")} className={CHAMP} placeholder="Nom du client" /><datalist id="clients-admin">{clients.map((c) => <option key={c} value={c} />)}</datalist></Champ>
+        <Champ label="Montant (GNF)"><input inputMode="numeric" value={f.montant ? Number(f.montant.replace(/\D/g, "")).toLocaleString("fr-FR") : ""} onChange={(e) => setF((s) => ({ ...s, montant: e.target.value.replace(/\D/g, "") }))} className={`${CHAMP} tabular-nums`} placeholder="3 000 000" /></Champ>
+        <Champ label="Moyen"><Liste value={f.moyen} onChange={set("moyen")} options={MOYENS} /></Champ>
+        <Champ label="Référence"><input value={f.reference} onChange={set("reference")} className={CHAMP} placeholder="N° de transaction, devis…" /></Champ>
+        <Champ label="Statut"><Liste value={f.statut} onChange={set("statut")} options={STATUTS_PAIEMENT} /></Champ>
+        <Champ label="Notes"><input value={f.notes} onChange={set("notes")} className={CHAMP} /></Champ>
+        <div className="flex items-end"><button type="submit" disabled={etat.attente} className={`${btn} h-10 w-full border-transparent bg-gold text-night hover:bg-gold-deep`}>{etat.attente ? "Ajout…" : "Ajouter"}</button></div>
       </form>
       {etat.message ? <p role="status" className="mt-3 text-[13px] text-palm">{etat.message}</p> : null}
       {etat.erreur ? <p role="alert" className="mt-3 text-[13px] text-danger">{etat.erreur}</p> : null}
