@@ -93,7 +93,7 @@ export default function Header() {
             </Link>
             <Link
               to="/devis"
-              className="group inline-flex items-center gap-2.5 rounded-full bg-gold py-3 pr-3.5 pl-4 text-[14px] xl:pr-4 xl:pl-5 xl:text-[14.5px] font-bold whitespace-nowrap text-night no-underline shadow-[0_10px_26px_-10px_rgba(242,163,58,.75)] transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-0.5 hover:bg-gold-deep hover:shadow-[0_14px_30px_-10px_rgba(242,163,58,.85)]"
+              className="group inline-flex items-center gap-2.5 rounded-full bg-gold py-3 pr-3.5 pl-4 text-[14px] xl:pr-4 xl:pl-5 xl:text-[14.5px] font-bold whitespace-nowrap text-night no-underline shadow-[0_10px_26px_-10px_rgba(108,198,234,.75)] transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-0.5 hover:bg-gold-deep hover:shadow-[0_14px_30px_-10px_rgba(108,198,234,.85)]"
             >
               Demander un devis
               <span className="grid h-6 w-6 place-items-center rounded-full bg-night/15 transition-transform group-hover:translate-x-0.5"><Icon name="arrow" className="h-3.5 w-3.5" strokeWidth={2.4} /></span>
