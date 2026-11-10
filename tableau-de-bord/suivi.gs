@@ -236,84 +236,156 @@ function preparerPaiements(classeur) {
   return f;
 }
 
+/*
+ * Onglet Tableau de bord, mis en page comme la maquette : cartes de chiffres, graphique, types, prochains événements.
+ * Grille : colonnes de 95 px (B C, E F, H I, K L, N O) séparées par des gouttières de 14 px (D, G, J, M).
+ * Les calculs intermédiaires (source du graphique, types, liste filtrée) sont dans les colonnes Q à AB, masquées.
+ */
 function preparerBord(classeur) {
   const f = onglet(classeur, ONGLET_BORD);
+  if (f.getMaxColumns() < 30) f.insertColumnsAfter(f.getMaxColumns(), 30 - f.getMaxColumns());
+  if (f.getMaxRows() < 60) f.insertRowsAfter(f.getMaxRows(), 60 - f.getMaxRows());
+  const tout = f.getRange(1, 1, f.getMaxRows(), f.getMaxColumns());
+  tout.breakApart();
   f.clear();
   f.getCharts().forEach((c) => f.removeChart(c));
+  f.showColumns(1, f.getMaxColumns());
   f.setHiddenGridlines(true);
-  [24, 250, 150, 24, 110, 220, 170, 90, 150, 140].forEach((l, i) => f.setColumnWidth(i + 1, l));
 
-  const debutMois = "EOMONTH(TODAY(),-1)+1";
-  const MOIS = '"janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."';
+  const GRIS = "#5f6f69", FOND = "#f3f5f4", CARTE = "#ffffff", BORD = "#d9e0dc", TEXTE = "#1f2a26";
+  tout.setBackground(FOND).setFontFamily("Manrope").setFontColor(TEXTE).setVerticalAlignment("middle");
+  [20, 95, 95, 14, 95, 95, 14, 95, 95, 14, 95, 95, 14, 95, 95, 20].forEach((l, i) => f.setColumnWidth(i + 1, l));
+
   const D = ONGLET_DEMANDES + "!";
   const P = ONGLET_PAIEMENTS + "!";
+  const debutMois = "(EOMONTH(TODAY(),-1)+1)";
+  const MOIS = '"janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."';
+  const MOIS_LONGS = '"janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"';
+  // Fusionne une plage et met la valeur ou la formule dans sa première cellule seulement
+  const fusion = (a1, contenu) => {
+    const r = f.getRange(a1).merge();
+    if (String(contenu).charAt(0) === "=") r.getCell(1, 1).setFormula(contenu); else r.getCell(1, 1).setValue(contenu);
+    return r;
+  };
+  const carte = (a1) => f.getRange(a1).setBackground(CARTE).setBorder(true, true, true, true, false, false, BORD, SpreadsheetApp.BorderStyle.SOLID);
 
-  f.getRange("B1").setValue("Suivi Camayenne Plage").setFontSize(18).setFontWeight("bold");
-  // Dates mises en texte sans code de format (« dd/mm/yyyy » ne se lit pas pareil selon la langue de la feuille)
-  f.getRange("B2").setFormula('="Mois en cours · au "&TEXT(DAY(TODAY()),"00")&"/"&TEXT(MONTH(TODAY()),"00")&"/"&YEAR(TODAY())').setFontColor("#5f6f69");
+  // En-tête
+  f.setRowHeight(1, 44);
+  f.getRange("B1").setValue("Suivi Camayenne Plage").setFontSize(20).setFontWeight("bold");
+  f.getRange("B2").setFormula("=UPPER(CHOOSE(MONTH(TODAY())," + MOIS_LONGS + ")&\" \"&YEAR(TODAY())&\" · au \"&DAY(TODAY())&\" \"&CHOOSE(MONTH(TODAY())," + MOIS_LONGS + "))")
+    .setFontSize(9).setFontWeight("bold").setFontColor(GRIS);
+  f.setRowHeight(3, 10);
 
-  // Indicateurs du mois
+  // Cartes de chiffres (lignes 4 et 5)
   const kpis = [
-    ["Demandes reçues ce mois", "=COUNTIFS(" + D + "A2:A,\">=\"&" + debutMois + ")"],
-    ["En attente de réponse", "=COUNTIF(" + D + "M2:M,\"Nouvelle\")+COUNTIF(" + D + "M2:M,\"Contacté\")"],
-    ["Devis envoyés, sans réponse", "=COUNTIF(" + D + "M2:M,\"Devis envoyé\")"],
-    ["Confirmés ou avec acompte", "=COUNTIF(" + D + "M2:M,\"Confirmé\")+COUNTIF(" + D + "M2:M,\"Acompte reçu\")"],
-    ["Acomptes encaissés ce mois (GNF)", "=SUMIFS(" + P + "D2:D," + P + "A2:A,\">=\"&" + debutMois + ")"],
+    ["B", "C", "Demandes reçues ce mois", "=COUNTIFS(" + D + "A2:A,\">=\"&" + debutMois + ")", "0"],
+    ["E", "F", "En attente de réponse", "=COUNTIF(" + D + "M2:M,\"Nouvelle\")+COUNTIF(" + D + "M2:M,\"Contacté\")", "0"],
+    ["H", "I", "Devis envoyés, sans réponse", "=COUNTIF(" + D + "M2:M,\"Devis envoyé\")", "0"],
+    ["K", "L", "Événements confirmés ou avec acompte", "=COUNTIF(" + D + "M2:M,\"Confirmé\")+COUNTIF(" + D + "M2:M,\"Acompte reçu\")", "0"],
+    ["N", "O", "Acomptes encaissés ce mois", "=SUMIFS(" + P + "D2:D," + P + "A2:A,\">=\"&" + debutMois + ")", "#,##0\" GNF\""],
   ];
-  f.getRange("B4").setValue("Indicateurs").setFontWeight("bold").setFontColor(VERT);
-  kpis.forEach((k, i) => {
-    const r = 5 + i;
-    f.getRange(r, 2).setValue(k[0]).setFontColor("#5f6f69");
-    f.getRange(r, 3).setFormula(k[1]).setFontSize(16).setFontWeight("bold").setHorizontalAlignment("right").setNumberFormat("#,##0");
+  f.setRowHeight(4, 58);
+  f.setRowHeight(5, 40);
+  kpis.forEach(([c1, c2, libelle, formule, format], i) => {
+    carte(c1 + "4:" + c2 + "5");
+    fusion(c1 + "4:" + c2 + "4", formule).setNumberFormat(format)
+      .setFontSize(i === 4 ? 17 : 28).setFontWeight("bold").setFontColor(i === 4 ? VERT : TEXTE)
+      .setHorizontalAlignment("left").setVerticalAlignment("bottom");
+    fusion(c1 + "5:" + c2 + "5", libelle)
+      .setFontSize(10).setFontColor(GRIS).setWrap(true).setVerticalAlignment("top");
   });
-  f.getRange(9, 3).setFontColor(VERT);
-  f.getRange("B5:C9").setBorder(null, null, true, null, null, true, "#e8edeb", SpreadsheetApp.BorderStyle.SOLID);
+  f.setRowHeight(6, 16);
 
-  // Demandes par mois, sur 6 mois (alimente le graphique)
-  f.getRange("B12").setValue("Demandes par mois").setFontWeight("bold").setFontColor(VERT);
-  f.getRange("B13:C13").setValues([["Mois", "Demandes"]]).setFontWeight("bold").setBackground(FOND_ENTETE);
+  // Calculs masqués : demandes par mois (Q13:R19), source du graphique
+  f.getRange("Q13:R13").setValues([["Mois", "Demandes"]]);
   for (let i = 0; i < 6; i++) {
     const r = 14 + i;
     const decalage = 5 - i;
     const debut = "(EOMONTH(TODAY()," + (-decalage - 1) + ")+1)";
     const fin = "(EOMONTH(TODAY()," + -decalage + ")+1)";
-    // Libellé en texte (« nov. 2026 ») pour que le graphique affiche une barre par mois
-    f.getRange(r, 2).setFormula("=CHOOSE(MONTH(" + debut + ")," + MOIS + ")&\" \"&YEAR(" + debut + ")");
-    f.getRange(r, 3).setFormula("=COUNTIFS(" + D + "A2:A,\">=\"&" + debut + "," + D + "A2:A,\"<\"&" + fin + ")");
+    f.getRange(r, 17).setFormula("=CHOOSE(MONTH(" + debut + ")," + MOIS + ")" + (decalage === 0 ? "&\" (en cours)\"" : ""));
+    f.getRange(r, 18).setFormula("=COUNTIFS(" + D + "A2:A,\">=\"&" + debut + "," + D + "A2:A,\"<\"&" + fin + ")");
   }
+
+  // Carte « Demandes par mois » (B7:I20) avec le graphique
+  carte("B7:I20");
+  f.setRowHeight(7, 34);
+  fusion("B7:I7", "   Demandes par mois").setFontSize(12).setFontWeight("bold");
   const graphique = f.newChart().asColumnChart()
-    .addRange(f.getRange("B13:C19"))
+    .addRange(f.getRange("Q13:R19"))
     .setNumHeaders(1)
+    .setHiddenDimensionStrategy(Charts.ChartHiddenDimensionStrategy.SHOW_BOTH)
     .setColors([VERT])
     .setLegendPosition(Charts.Position.NONE)
-    .setOption("title", "Demandes reçues par mois")
+    .setOption("backgroundColor", CARTE)
     .setOption("vAxis.minValue", 0)
     .setOption("vAxis.format", "0")
-    .setOption("width", 520).setOption("height", 260)
-    .setPosition(21, 2, 0, 0)
+    .setOption("vAxis.gridlines.color", "#e8edeb")
+    .setOption("bar.groupWidth", "62%")
+    .setOption("series", { 0: { dataLabel: "value" } })
+    .setOption("width", 570).setOption("height", 268)
+    .setPosition(8, 2, 8, 2)
     .build();
   f.insertChart(graphique);
 
-  // Par type d'événement, 6 derniers mois
-  f.getRange("B36").setValue("Par type d'événement · 6 derniers mois").setFontWeight("bold").setFontColor(VERT);
-  f.getRange("B37").setFormula(
-    "=IFERROR(QUERY(" + D + "A2:F,\"select F, count(F) where A >= date '\"&YEAR(EOMONTH(TODAY(),-6)+1)&\"-\"&TEXT(MONTH(EOMONTH(TODAY(),-6)+1),\"00\")&\"-01' and F is not null group by F order by count(F) desc label F 'Événement', count(F) 'Demandes'\",0),\"Aucune demande\")",
+  // Calculs masqués : types d'événement des 6 derniers mois (T1:U…)
+  const debut6 = "(EOMONTH(TODAY(),-6)+1)";
+  f.getRange("T1").setFormula(
+    "=IFERROR(QUERY(" + D + "A2:F,\"select F, count(F) where A >= date '\"&YEAR(" + debut6 + ")&\"-\"&TEXT(MONTH(" + debut6 + "),\"00\")&\"-01' and F is not null group by F order by count(F) desc label F 'Type', count(F) 'Nb'\",0),\"\")",
   );
-  f.getRange("B37:C37").setFontWeight("bold").setBackground(FOND_ENTETE);
 
-  // Prochains événements, 30 jours
-  f.getRange("E4").setValue("Prochains événements · 30 jours").setFontWeight("bold").setFontColor(VERT);
-  f.getRange("E5:J5").setValues([["Date", "Client", "Événement", "Pers.", "Espaces", "Statut"]]).setFontWeight("bold").setBackground(FOND_ENTETE);
-  f.getRange("E6").setFormula(
+  // Carte « Par type d'événement » (K7:O20) : libellé, barre (SPARKLINE), nombre
+  carte("K7:O20");
+  fusion("K7:O7", "   Par type d'événement · 6 mois").setFontSize(12).setFontWeight("bold");
+  for (let k = 1; k <= 7; k++) {
+    const r = 8 + k;
+    const type = "INDEX($T$2:$T," + k + ")";
+    const nb = "INDEX($U$2:$U," + k + ")";
+    fusion("K" + r + ":L" + r, "=IFERROR(\"   \"&" + type + ",\"\")").setFontSize(10);
+    fusion("M" + r + ":N" + r, 
+      "=IFERROR(SPARKLINE(" + nb + ",{\"charttype\",\"bar\";\"max\",MAX($U$2:$U);\"color1\",\"" + VERT + "\"}),\"\")",
+    );
+    f.getRange("O" + r).setFormula("=IFERROR(" + nb + ",\"\")").setFontWeight("bold").setHorizontalAlignment("center");
+  }
+  f.getRange("K9").setFormula("=IF($T$2=\"\",\"   Aucune demande pour l'instant\"," + "\"   \"&$T$2)");
+  f.setRowHeight(21, 16);
+
+  // Calculs masqués : prochains événements sur 30 jours, triés par date (W2:AB…)
+  f.getRange("W2").setFormula(
     "=IFERROR(SORT(FILTER({" + D + "G2:G," + D + "B2:B," + D + "F2:F," + D + "H2:H," + D + "J2:J," + D + "M2:M}," +
-      D + "G2:G>=TODAY()," + D + "G2:G<=TODAY()+30," + D + "M2:M<>\"Annulé\"),1,TRUE),\"Aucun événement prévu dans les 30 jours\")",
+      D + "G2:G>=TODAY()," + D + "G2:G<=TODAY()+30," + D + "M2:M<>\"Annulé\"),1,TRUE),\"\")",
   );
-  f.getRange("E6:E40").setNumberFormat("ddd dd/mm");
-  f.getRange("E6:J40").setVerticalAlignment("top");
-  const statuts = f.getRange("J6:J40");
+
+  // Carte « Prochains événements » (B22:O32)
+  const NB_EVENEMENTS = 9;
+  const fin = 23 + NB_EVENEMENTS;
+  carte("B22:O" + fin);
+  f.setRowHeight(22, 34);
+  fusion("B22:O22", "   Prochains événements · 30 jours").setFontSize(12).setFontWeight("bold");
+  const colonnes = [["B", "C", "Date"], ["D", "F", "Client"], ["G", "I", "Événement"], ["J", "L", "Participants · espaces"], ["M", "O", "Statut"]];
+  colonnes.forEach(([c1, c2, titre]) => fusion(c1 + "23:" + c2 + "23", titre === "Date" ? "   Date" : titre)
+    .setFontSize(9).setFontWeight("bold").setFontColor(GRIS));
+  for (let k = 1; k <= NB_EVENEMENTS; k++) {
+    const r = 23 + k;
+    const val = (col) => "INDEX($" + col + "$2:$" + col + "," + k + ")";
+    f.setRowHeight(r, 30);
+    fusion("B" + r + ":C" + r, "=IFERROR(IF(" + val("W") + "=\"\",\"\"," + val("W") + "),\"\")").setNumberFormat("\"   \"ddd d mmm").setFontWeight("bold");
+    fusion("D" + r + ":F" + r, "=IFERROR(" + val("X") + ",\"\")");
+    fusion("G" + r + ":I" + r, "=IFERROR(" + val("Y") + ",\"\")").setFontColor(GRIS);
+    fusion("J" + r + ":L" + r, "=IFERROR(IF(" + val("Z") + "=\"\",\"\"," + val("Z") + "&\" pers. · \"&" + val("AA") + "),\"\")").setFontColor(GRIS);
+    fusion("M" + r + ":O" + r, "=IFERROR(" + val("AB") + ",\"\")").setHorizontalAlignment("center").setFontSize(10);
+    if (k < NB_EVENEMENTS) f.getRange("B" + r + ":O" + r).setBorder(null, null, true, null, false, false, "#e8edeb", SpreadsheetApp.BorderStyle.SOLID);
+  }
+  f.getRange("B24").setFormula("=IF($W$2=\"\",\"   Aucun événement prévu dans les 30 jours\",$W$2)");
+
+  // Pastilles de statut colorées
+  const statuts = f.getRange("M24:O" + fin);
   f.setConditionalFormatRules(Object.keys(COULEURS_STATUT).map((s) =>
     SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo(s)
       .setBackground(COULEURS_STATUT[s][0]).setFontColor(COULEURS_STATUT[s][1]).setBold(true).setRanges([statuts]).build()));
+
+  // Masque les colonnes de calcul et les colonnes vides à droite
+  f.hideColumns(17, f.getMaxColumns() - 16);
 
   proteger(f, f.getRange(1, 1, f.getMaxRows(), f.getMaxColumns()), "Tableau de bord calculé");
   return f;
