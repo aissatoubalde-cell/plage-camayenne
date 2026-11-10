@@ -162,11 +162,13 @@ function installer() {
   });
   classeur.setActiveSheet(bord);
 
-  SpreadsheetApp.getUi().alert(
-    "Feuille installée",
-    "Les onglets Tableau de bord, Demandes et Paiements sont prêts.\n\nÉtape suivante : Déployer → Nouveau déploiement → Application Web (voir LISEZMOI.md).",
-    SpreadsheetApp.getUi().ButtonSet.OK,
-  );
+  // Le message ne peut s'afficher que si la feuille est ouverte dans le même compte ; sinon, il va dans le journal.
+  const texteFin = "Les onglets Tableau de bord, Demandes et Paiements sont prêts. Étape suivante : Déployer → Nouveau déploiement → Application Web (voir LISEZMOI.md).";
+  try {
+    SpreadsheetApp.getUi().alert("Feuille installée", texteFin, SpreadsheetApp.getUi().ButtonSet.OK);
+  } catch (e) {
+    console.log("Feuille installée. " + texteFin);
+  }
 }
 
 function onglet(classeur, nom) {
