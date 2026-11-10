@@ -8,6 +8,8 @@
  *   couleurs, formules, graphique, protections). À lancer une seule fois ; le relancer ne supprime aucune donnée.
  * - doPost(e) : reçoit chaque demande envoyée par le formulaire « Demander un devis » du site et l'ajoute
  *   en haut de l'onglet Demandes.
+ * - quandStatutChange(e) : quand une demande passe à « Confirmé », envoie un e-mail de confirmation au client
+ *   (déclencheur installé par installer()).
  *
  * Les formules sont écrites en syntaxe anglaise (virgules) : c'est ce qu'attend Apps Script,
  * Google Sheets les affiche ensuite en français.
@@ -45,6 +47,16 @@ const FOND_ENTETE = "#f3f5f4";
 // Limites anti-abus : l'adresse du script est visible dans le code du site.
 const MAX_PAR_HEURE = 30;
 const MAX_LONGUEUR = 3000;
+
+// E-mail de confirmation envoyé au client quand le statut passe à « Confirmé »
+const STATUT_CONFIRME = "Confirmé";
+const CONTACT = {
+  nom: "Camayenne Plage",
+  email: "camayenneplagejpc224@gmail.com",
+  telephone: "+224 620 613 554",
+  whatsapp: "https://wa.me/224620613554",
+  site: "https://plage-camayenne.vercel.app",
+};
 
 /* ======================================================================
  * Réception des demandes du site
@@ -166,6 +178,7 @@ function installer() {
   classeur.setActiveSheet(bord);
   SpreadsheetApp.flush();
   classeur.setSpreadsheetLocale("fr_FR");
+  installerDeclencheur(classeur);
 
   // Le message ne peut s'afficher que si la feuille est ouverte dans le même compte ; sinon, il va dans le journal.
   const texteFin = "Les onglets Tableau de bord, Demandes et Paiements sont prêts. Étape suivante : Déployer → Nouveau déploiement → Application Web (voir LISEZMOI.md).";
@@ -399,6 +412,96 @@ function proteger(feuille, plage, description) {
   const p = plage.protect().setDescription(description);
   p.removeEditors(p.getEditors().filter((u) => u.getEmail() !== Session.getEffectiveUser().getEmail()));
   if (p.canDomainEdit()) p.setDomainEdit(false);
+}
+
+/* ======================================================================
+ * E-mail de confirmation au client
+ * ==================================================================== */
+
+/** Installe (une seule fois) le déclencheur qui surveille les changements de statut. */
+function installerDeclencheur(classeur) {
+  ScriptApp.getProjectTriggers()
+    .filter((t) => t.getHandlerFunction() === "quandStatutChange")
+    .forEach((t) => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger("quandStatutChange").forSpreadsheet(classeur).onEdit().create();
+}
+
+/**
+ * Appelée à chaque modification de la feuille (par le propriétaire ou un éditeur invité).
+ * N'agit que si une seule cellule Statut de l'onglet Demandes passe à « Confirmé ».
+ * Une note sur la cellule garde la trace de l'envoi : un deuxième passage à « Confirmé » ne renvoie rien.
+ */
+function quandStatutChange(e) {
+  if (!e || !e.range) return;
+  const cellule = e.range;
+  const feuille = cellule.getSheet();
+  if (feuille.getName() !== ONGLET_DEMANDES || cellule.getColumn() !== COL_STATUT || cellule.getRow() < 2) return;
+  if (cellule.getNumRows() !== 1 || cellule.getNumColumns() !== 1) return;
+  if (e.value !== STATUT_CONFIRME || e.oldValue === STATUT_CONFIRME) return;
+  if (/Confirmation envoyée/.test(cellule.getNote())) return;
+
+  const v = feuille.getRange(cellule.getRow(), 1, 1, COLONNES_DEMANDES.length).getValues()[0];
+  const demande = { nom: v[1], email: String(v[2]).trim(), type: v[5], date: v[6], nb: v[7], duree: v[8], espaces: v[9], devis: v[13] };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(demande.email)) {
+    cellule.setNote("Confirmation non envoyée : adresse e-mail du client invalide.");
+    return;
+  }
+  envoyerConfirmation(demande, demande.email);
+  const quand = Utilities.formatDate(new Date(), "Africa/Conakry", "dd/MM/yyyy à HH:mm");
+  cellule.setNote("Confirmation envoyée au client le " + quand + " (" + demande.email + ").");
+}
+
+function envoyerConfirmation(d, destinataire) {
+  const date = d.date instanceof Date ? Utilities.formatDate(d.date, "Africa/Conakry", "dd/MM/yyyy") : "";
+  const details = [
+    ["Événement", d.type],
+    ["Date", date],
+    ["Participants", d.nb],
+    ["Durée", d.duree],
+    ["Espaces", d.espaces],
+    ["Montant du devis", d.devis ? Number(d.devis).toLocaleString("fr-FR").replace(/\u202f|\u00a0/g, " ") + " GNF" : ""],
+  ].filter((l) => l[1] !== "" && l[1] != null);
+  const bonjour = "Bonjour" + (d.nom ? " " + d.nom : "") + ",";
+
+  const texteBrut = [
+    bonjour, "",
+    "Nous avons le plaisir de vous confirmer votre événement à Camayenne Plage.", "",
+    ...details.map((l) => "• " + l[0] + " : " + l[1]), "",
+    "Notre équipe reste à votre disposition pour préparer les derniers détails avec vous.",
+    "Téléphone : " + CONTACT.telephone + " · WhatsApp : " + CONTACT.whatsapp, "",
+    "À très bientôt,", "L'équipe Camayenne Plage", CONTACT.site,
+  ].join("\n");
+
+  const echapper = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const lignes = details.map((l) =>
+    '<tr><td style="padding:6px 16px 6px 0;color:#5f6f69">' + echapper(l[0]) + '</td><td style="padding:6px 0;font-weight:600">' + echapper(l[1]) + "</td></tr>").join("");
+  const html =
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#1f2a26;max-width:560px">' +
+    "<p>" + echapper(bonjour) + "</p>" +
+    "<p>Nous avons le plaisir de vous confirmer votre événement à <b>Camayenne Plage</b>.</p>" +
+    '<table style="border-collapse:collapse;margin:8px 0 16px">' + lignes + "</table>" +
+    "<p>Notre équipe reste à votre disposition pour préparer les derniers détails avec vous :<br>" +
+    "Téléphone : " + CONTACT.telephone + " · " + '<a href="' + CONTACT.whatsapp + '">WhatsApp</a></p>' +
+    "<p>À très bientôt,<br>L'équipe Camayenne Plage<br>" + '<a href="' + CONTACT.site + '">' + CONTACT.site.replace("https://", "") + "</a></p></div>";
+
+  MailApp.sendEmail({
+    to: destinataire,
+    subject: "Votre événement à Camayenne Plage est confirmé",
+    body: texteBrut,
+    htmlBody: html,
+    name: CONTACT.nom,
+    replyTo: CONTACT.email,
+  });
+}
+
+/** Envoie l'e-mail de confirmation d'exemple à votre propre adresse, pour voir à quoi il ressemble. */
+function testerEmailConfirmation() {
+  const moi = Session.getEffectiveUser().getEmail();
+  envoyerConfirmation({
+    nom: "Fatoumata Barry", type: "Séminaire / réunion", date: new Date(Date.now() + 10 * 864e5),
+    nb: 60, duree: "Journée", espaces: "Salle de conférence, Espace lounge", devis: 18500000,
+  }, moi);
+  console.log("E-mail d'exemple envoyé à " + moi);
 }
 
 /** Ajoute une demande fictive pour tester la feuille sans passer par le site (à supprimer ensuite). */

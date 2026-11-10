@@ -47,9 +47,19 @@ Bouton **Partager** de la feuille, en invitant chaque personne par son adresse G
 
 Les colonnes remplies par le site et l'onglet Tableau de bord sont protégés : seul le propriétaire peut les modifier, le gérant ne peut pas les effacer par erreur. L'historique des versions (*Fichier → Historique des versions*) garde toutes les modifications.
 
+## Donner l'accès à l'administrateur ou au gérant
+
+1. Ouvrir la feuille avec le compte propriétaire, puis cliquer sur **Partager** (en haut à droite).
+2. Saisir l'adresse Gmail de la personne, choisir **Éditeur**, puis **Envoyer**.
+3. La personne reçoit un e-mail « … vous a partagé Suivi Camayenne Plage » : elle clique sur **Ouvrir**.
+4. Ensuite, la feuille est dans son Google Drive, rubrique **Partagés avec moi**, et dans l'appli **Google Sheets** sur téléphone (même compte Google). Conseil : l'ajouter en favori (étoile à côté du titre).
+
+Le lien de la feuille ne fonctionne que pour les personnes invitées ; laisser *Accès général* sur **Limité**.
+
 ## Au quotidien
 
 - Nouvelle demande : elle arrive avec le statut **Nouvelle**. Le gérant le fait évoluer dans la liste déroulante : *Contacté → Devis envoyé → Acompte reçu → Confirmé*, ou *Annulé*.
+- **Passer une demande à « Confirmé » envoie automatiquement un e-mail de confirmation au client** (événement, date, participants, espaces, montant du devis s'il est rempli). Une note apparaît sur la cellule Statut avec la date d'envoi ; repasser à « Confirmé » plus tard ne renvoie rien. L'e-mail part du compte Google propriétaire de la feuille, au nom de « Camayenne Plage », et les réponses du client arrivent sur camayenneplagejpc224@gmail.com. Pour voir l'e-mail sans l'envoyer à un client : dans Apps Script, exécuter **testerEmailConfirmation** (il arrive dans votre propre boîte).
 - Acompte reçu : ajouter une ligne dans **Paiements** (date, client, référence, montant, moyen), puis cocher **Pointé** après vérification dans CinetPay ou Orange Money.
 - Le **Tableau de bord** se met à jour tout seul.
 
