@@ -79,6 +79,13 @@ export const espaces = [
     text: "Beach-volley, basketball et autres loisirs collectifs." },
   { n: "05", photo: "lounge-buffet", alt: "Espace lounge", title: "Espace lounge",
     photos: [
+      ["lounge-cabanes", "Les cabanes en bois du lounge sur le sable, face à la mer"],
+      ["lounge-allee", "L’allée couverte et fleurie entre les cabanes"],
+      ["lounge-arche", "L’arche fleurie illuminée en soirée"],
+      ["lounge-soiree", "Soirée entre amis dans les fauteuils du lounge"],
+      ["lounge-bar", "Le bar en bois sous les palmiers"],
+      ["lounge-fauteuils", "Fauteuils en bois et cuir sur le sable"],
+      ["lounge-logo", "Le logo Coco Lounge peint au sol"],
       ["lounge-buffet", "Buffet dressé avec plateaux et fleurs blanches"],
       ["lounge-cocktail", "Buffet cocktail de viennoiseries et mini-burgers"],
       ["lounge-diner", "Dîner entre invités sous un kiosque, le soir"],
