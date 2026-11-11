@@ -11,7 +11,7 @@ Site de **Camayenne Plage**, complexe de loisirs et d’événementiel en bord d
 | Structure | React 19 + Vite 7, React Router | `src/` |
 | Styles | Tailwind CSS 4 (jetons de couleurs et polices dans `@theme`) | `src/index.css`, classes dans les composants |
 | Formulaire de devis | Web3Forms (e-mail sans serveur), repli `mailto:` | `src/components/DevisForm.jsx` |
-| Tableau de bord des demandes | Google Sheets privé alimenté par Apps Script (`VITE_SHEET_URL`) | `tableau-de-bord/` (mode d’emploi dans `LISEZMOI.md`) |
+| Administration (/admin) | Page réservée à l’équipe (mot de passe) : tableau de bord, demandes, statuts, acomptes. Demandes stockées dans une base PostgreSQL Neon rattachée à Vercel | `src/pages/Admin.jsx`, `netlify/functions/admin.mjs`, `netlify/functions/demande.mjs`, `netlify/lib/demandes.mjs` |
 | Bouton WhatsApp flottant | lien `wa.me` avec message pré-rempli | `src/components/WhatsAppButton.jsx` |
 | Carte | Google Maps intégrée (sans clé) + lien itinéraire | `src/components/Infos.jsx`, `src/config.js` |
 | Vidéo | lecteur Facebook chargé au clic | `src/components/Video.jsx` |
@@ -75,6 +75,16 @@ scripts/images.mjs      génération des images
 - **Photo du DG** : remplacez le bloc « DG » dans `MotDuDG.jsx` par une balise `<img>`.
 - **Couleurs et polices** : jetons `@theme` dans `src/index.css` (`--color-gold`, `--color-night`…), utilisés par les classes `text-gold`, `bg-night`, etc.
 - **Domaine** : remplacez `https://www.camayenneplage.com` dans `index.html`, `public/sitemap.xml`, `public/robots.txt` et `.env`.
+
+## Administration (/admin)
+
+Adresse : `/admin` (pas de lien sur le site, page non indexée). Chaque demande envoyée par le formulaire de devis est enregistrée dans la base (en plus de l’e-mail Web3Forms) et apparaît dans la page.
+
+- **Connexion** : mot de passe d’équipe `ADMIN_PASSWORD` (Vercel). 8 essais ratés au plus par quart d’heure et par adresse IP ; on reste connecté 30 jours. Changer le mot de passe dans Vercel puis redéployer déconnecte tout le monde.
+- **Demandes** : statut, montant du devis, notes, suppression. Au passage à « Confirmé », deux boutons ouvrent un e-mail ou un message WhatsApp de confirmation déjà rédigé, envoyé depuis la messagerie de l’équipe.
+- **Paiements** : saisie des acomptes reçus, statut modifiable, case « Pointé » une fois vérifiés chez CinetPay ou Orange Money. En mode manuel Orange Money (sans clés CinetPay), le client déclare son acompte sur la page Paiement avec le **numéro de transaction du SMS** : il arrive ici « En attente » (badge « Déclaré sur le site ») jusqu’à vérification (`/api/paiement-declare`). WhatsApp reste proposé en option.
+- **Historique** : un mois à la fois (résumé, demandes reçues, paiements, journal de toutes les actions : demande reçue, statut, devis, notes, confirmation, paiement, suppression). Rien n’est effacé : le tableau de bord montre le mois en cours, l’historique tous les mois. Bouton « Imprimer ce mois ».
+- **Base** : PostgreSQL Neon, créée depuis Vercel (*Storage*), qui fournit `DATABASE_URL`. Les tables se créent seules au premier appel. En local : `DATABASE_URL=pglite` lance une base embarquée en mémoire (vidée à chaque redémarrage).
 
 ## Variables d’environnement
 

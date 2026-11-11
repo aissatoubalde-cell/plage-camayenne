@@ -17,8 +17,6 @@ export const site = {
   // Numéro qui reçoit les acomptes Orange Money quand CinetPay n’est pas configuré.
   orangeMoney: import.meta.env.VITE_ORANGE_MONEY_NUMBER || "+224 620 613 554",
   web3formsKey: import.meta.env.VITE_WEB3FORMS_KEY || "",
-  // Feuille Google de suivi : adresse de l’application Web Apps Script (voir tableau-de-bord/LISEZMOI.md). Vide : désactivé.
-  sheetUrl: import.meta.env.VITE_SHEET_URL || "",
   plausibleDomain: import.meta.env.VITE_PLAUSIBLE_DOMAIN || "",
   paymentApi: "/api",
 };

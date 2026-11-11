@@ -11,12 +11,14 @@
     "images": "node scripts/images.mjs"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
     "motion": "^14.10.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.0.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
     "@tailwindcss/vite": "^4.0.0",
     "@vitejs/plugin-react": "^5.0.0",
     "sharp": "^0.35.5",
