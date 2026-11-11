@@ -7,7 +7,7 @@ export default function Espaces() {
   return (
     <section id="espaces" className="py-section">
       <Wrap>
-        <SectionHead eyebrow="Espaces de location" title="Sept espaces, *un seul site*." lede="Chaque espace se loue seul ou se combine avec d’autres, à la demi-journée, à la journée ou en soirée." />
+        <SectionHead eyebrow="Espaces de location" title="Treize espaces, *un seul site*." lede="Chaque espace se loue seul ou se combine avec d’autres, à la demi-journée, à la journée ou en soirée." />
         <div className="border-t border-line">
           {espaces.map((e, i) => (
             <Reveal as="article" key={e.n} delay={Math.min(i, 3) * 0.08} amount={0.3} className="group grid grid-cols-[36px_1fr] items-center gap-x-3.5 gap-y-1.5 border-b border-line py-[22px] md:grid-cols-[44px_120px_1fr] md:gap-6 lg:grid-cols-[64px_168px_1fr_1.1fr]">
