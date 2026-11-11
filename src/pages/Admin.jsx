@@ -56,7 +56,9 @@ const aujourdhui = () => jour(new Date().toISOString());
 const debutDuMois = (decalage = 0) => { const d = new Date(); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + decalage, 1)); };
 const fmtJour = (iso, opts = { day: "2-digit", month: "2-digit", year: "numeric" }) => (iso ? jour(iso).toLocaleDateString("fr-FR", { timeZone: "UTC", ...opts }) : "");
 const fmtRecue = (iso) => (iso ? new Date(iso).toLocaleString("fr-FR", { timeZone: "Africa/Conakry", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "");
-const gnf = (n) => `${Math.round(Number(n) || 0).toLocaleString("fr-FR")} GNF`;
+// Espace insécable classique entre les milliers : l'espace fine du format français disparaît sur Safari en gras serré.
+const nombre = (n) => Math.round(Number(n) || 0).toLocaleString("fr-FR").replace(/[\u202f\u00a0\s]/g, "\u00a0");
+const gnf = (n) => `${nombre(n)}\u00a0GNF`;
 const chiffresTel = (t) => String(t || "").replace(/\D/g, "");
 
 /* ---------- Petits éléments ---------- */
@@ -342,7 +344,7 @@ function CarteDemande({ d, onEnregistre, onSupprime }) {
           <Liste value={f.statut} onChange={(e) => setF((s) => ({ ...s, statut: e.target.value }))} options={STATUTS} />
         </Champ>
         <Champ label="Devis (GNF)">
-          <input inputMode="numeric" value={f.devis ? Number(f.devis.replace(/\D/g, "")).toLocaleString("fr-FR") : ""} onChange={(e) => setF((s) => ({ ...s, devis: e.target.value.replace(/\D/g, "") }))} className={`${CHAMP} tabular-nums`} placeholder="Montant" />
+          <input inputMode="numeric" value={f.devis ? nombre(f.devis.replace(/\D/g, "")) : ""} onChange={(e) => setF((s) => ({ ...s, devis: e.target.value.replace(/\D/g, "") }))} className={`${CHAMP} tabular-nums`} placeholder="Montant" />
         </Champ>
         <Champ label="Notes" className="col-span-2 md:col-span-1">
           <input value={f.notes} maxLength={500} onChange={(e) => setF((s) => ({ ...s, notes: e.target.value }))} className={CHAMP} placeholder="Relancer jeudi, visite le 12…" />
@@ -421,7 +423,7 @@ function FormPaiement({ demandes, onAjoute }) {
       <form onSubmit={ajouter} className="grid gap-x-3 gap-y-4 sm:grid-cols-2 lg:grid-cols-4" noValidate>
         <Champ label="Date"><input type="date" value={f.date} onChange={set("date")} className={`${CHAMP} [color-scheme:dark]`} /></Champ>
         <Champ label="Client"><input list="clients-admin" value={f.client} onChange={set("client")} className={CHAMP} placeholder="Nom du client" /><datalist id="clients-admin">{clients.map((c) => <option key={c} value={c} />)}</datalist></Champ>
-        <Champ label="Montant (GNF)"><input inputMode="numeric" value={f.montant ? Number(f.montant.replace(/\D/g, "")).toLocaleString("fr-FR") : ""} onChange={(e) => setF((s) => ({ ...s, montant: e.target.value.replace(/\D/g, "") }))} className={`${CHAMP} tabular-nums`} placeholder="3 000 000" /></Champ>
+        <Champ label="Montant (GNF)"><input inputMode="numeric" value={f.montant ? nombre(f.montant.replace(/\D/g, "")) : ""} onChange={(e) => setF((s) => ({ ...s, montant: e.target.value.replace(/\D/g, "") }))} className={`${CHAMP} tabular-nums`} placeholder="3 000 000" /></Champ>
         <Champ label="Moyen"><Liste value={f.moyen} onChange={set("moyen")} options={MOYENS} /></Champ>
         <Champ label="Référence"><input value={f.reference} onChange={set("reference")} className={CHAMP} placeholder="N° de transaction, devis…" /></Champ>
         <Champ label="Statut"><Liste value={f.statut} onChange={set("statut")} options={STATUTS_PAIEMENT} /></Champ>
@@ -629,7 +631,8 @@ export default function Admin() {
   const charger = useCallback(async () => {
     setErreur("");
     try {
-      const r = await appel("donnees");
+      // Un raté passager (mise à jour du site, base qui se réveille) est retenté une fois sans rien afficher.
+      const r = await appel("donnees").catch((err) => (err.status === 401 ? Promise.reject(err) : new Promise((ok) => setTimeout(ok, 1500)).then(() => appel("donnees"))));
       setDonnees({ demandes: r.demandes, paiements: r.paiements });
       setMaj(new Date());
       setEtat("pret");

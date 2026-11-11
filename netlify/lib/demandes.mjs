@@ -29,7 +29,16 @@ async function connecter() {
   }
   const { neon } = await import("@neondatabase/serverless");
   const sql = neon(url);
-  return (texte, params = []) => sql.query(texte, params);
+  // Une lecture qui échoue (base en veille qui se réveille, coupure réseau) est retentée une fois.
+  return async (texte, params = []) => {
+    try {
+      return await sql.query(texte, params);
+    } catch (e) {
+      if (!/^\s*select/i.test(texte)) throw e;
+      await new Promise((r) => setTimeout(r, 400));
+      return sql.query(texte, params);
+    }
+  };
 }
 
 // Les « add column if not exists » font évoluer une base déjà créée sans rien perdre.
@@ -66,7 +75,16 @@ export function base() {
   if (!pret) {
     pret = (async () => {
       const q = await connecter();
-      for (const s of SCHEMA) await q(s);
+      // Plusieurs serveurs peuvent démarrer en même temps : une mise à jour du schéma qui échoue est retentée,
+      // puis ignorée (les tables existent déjà dans ce cas) plutôt que de bloquer la page.
+      for (const s of SCHEMA) {
+        try {
+          await q(s);
+        } catch {
+          await new Promise((r) => setTimeout(r, 300));
+          await q(s).catch((e) => console.error("Schéma :", e.message));
+        }
+      }
       return q;
     })().catch((e) => { pret = null; throw e; });
   }
