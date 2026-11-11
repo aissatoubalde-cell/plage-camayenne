@@ -7,7 +7,7 @@ import { useTitle } from "../hooks";
 
 /*
  * Page /admin : tableau de bord des demandes de devis, réservé à l'équipe.
- * Connexion par mot de passe d'équipe ; les données viennent de la base du site via /api/admin
+ * Connexion par adresse e-mail autorisée et mot de passe personnel (changé à la première connexion) ; les données viennent de la base du site via /api/admin
  * (netlify/functions/admin.mjs, netlify/lib/demandes.mjs). La page n'est liée nulle part sur le site et n'est pas indexée.
  */
 
@@ -29,6 +29,13 @@ const TON_STATUT = {
 
 const MESSAGES = {
   "mot-de-passe": "Mot de passe incorrect.",
+  identifiants: "Adresse e-mail ou mot de passe incorrect.",
+  "trop-court": "Le nouveau mot de passe doit faire au moins 10 caractères.",
+  "trop-simple": "Le nouveau mot de passe doit contenir des lettres et au moins un chiffre.",
+  "cle-de-secours": "Choisissez un mot de passe différent du mot de passe provisoire.",
+  identique: "Choisissez un mot de passe différent de l’actuel.",
+  ancien: "Le mot de passe actuel est incorrect.",
+  differents: "Les deux nouveaux mots de passe ne sont pas identiques.",
   essais: "Trop d’essais ratés. Réessayez dans un quart d’heure.",
   base: "La base de données ne répond pas. Réessayez dans un instant.",
   "non-configure": "L’administration n’est pas encore configurée sur le serveur (DATABASE_URL, ADMIN_PASSWORD, ADMIN_SECRET).",
@@ -101,18 +108,43 @@ const btn = "inline-flex cursor-pointer items-center justify-center gap-2 rounde
 
 /* ---------- Connexion ---------- */
 
-function Connexion({ onConnecte }) {
-  const [motDePasse, setMotDePasse] = useState("");
+function ChampMotDePasse({ id, label, value, onChange, autoComplete, autoFocus }) {
   const [voir, setVoir] = useState(false);
+  return (
+    <label className="grid gap-2" htmlFor={id}>
+      <span className={labelCls}>{label}</span>
+      <span className="relative">
+        <input id={id} type={voir ? "text" : "password"} autoComplete={autoComplete} value={value} onChange={onChange} className={`${inputCls} pr-12`} autoFocus={autoFocus} />
+        <button type="button" onClick={() => setVoir((v) => !v)} aria-label={voir ? "Masquer le mot de passe" : "Afficher le mot de passe"} className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-sand-soft hover:text-sand"><Icon name="eye" className="h-5 w-5" /></button>
+      </span>
+    </label>
+  );
+}
+
+const Alerte = ({ children }) => <p role="alert" className="rounded-lg border border-danger/60 bg-danger/10 px-3.5 py-2.5 text-[13.5px] text-danger">{children}</p>;
+
+function EnTeteConnexion({ titre }) {
+  return (
+    <div>
+      <p className="text-[12px] font-semibold tracking-[0.16em] uppercase text-gold">Camayenne Plage</p>
+      <h1 className="mt-1 text-[24px] leading-tight font-extrabold">{titre}</h1>
+    </div>
+  );
+}
+
+function Connexion({ onConnecte }) {
+  const [email, setEmail] = useState("");
+  const [motDePasse, setMotDePasse] = useState("");
+  const [oubli, setOubli] = useState(false);
   const [etat, setEtat] = useState({ attente: false, erreur: "" });
 
   const connecter = async (e) => {
     e.preventDefault();
-    if (!motDePasse) return setEtat({ attente: false, erreur: "Saisissez le mot de passe." });
+    if (!email.trim() || !motDePasse) return setEtat({ attente: false, erreur: "Saisissez votre adresse e-mail et votre mot de passe." });
     setEtat({ attente: true, erreur: "" });
     try {
-      await appel("connexion", { motDePasse });
-      onConnecte();
+      const r = await appel("connexion", { email, motDePasse });
+      onConnecte(r);
     } catch (err) {
       setEtat({ attente: false, erreur: MESSAGES[err.code] || MESSAGES.base });
     }
@@ -121,26 +153,65 @@ function Connexion({ onConnecte }) {
   return (
     <div className="grid min-h-screen place-items-center px-4 py-10">
       <Carte className="grid w-full max-w-[420px] gap-5 p-7">
-        <div>
-          <p className="text-[12px] font-semibold tracking-[0.16em] uppercase text-gold">Camayenne Plage</p>
-          <h1 className="mt-1 text-[24px] leading-tight font-extrabold">Administration</h1>
-        </div>
+        <EnTeteConnexion titre="Administration" />
         <form onSubmit={connecter} className="grid gap-4" noValidate>
           <label className="grid gap-2">
-            <span className={labelCls}>Mot de passe de l’équipe</span>
-            <span className="relative">
-              <input type={voir ? "text" : "password"} autoComplete="current-password" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} className={`${inputCls} pr-12`} autoFocus />
-              <button type="button" onClick={() => setVoir((v) => !v)} aria-label={voir ? "Masquer le mot de passe" : "Afficher le mot de passe"} className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-sand-soft hover:text-sand"><Icon name="eye" className="h-5 w-5" /></button>
-            </span>
+            <span className={labelCls}>Adresse e-mail</span>
+            <input type="email" autoComplete="username" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} placeholder="adresse@exemple.com" autoFocus />
           </label>
+          <ChampMotDePasse id="mdp" label="Mot de passe" autoComplete="current-password" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} />
           <button type="submit" disabled={etat.attente} className={`${btn} border-transparent bg-gold py-3 text-night hover:bg-gold-deep`}>
             {etat.attente ? "Connexion…" : "Se connecter"}<Icon name="arrow" className="h-4 w-4" />
           </button>
-          <p className="text-[13px] text-sand-soft">Vous resterez connecté 30 jours sur cet appareil.</p>
+          <button type="button" onClick={() => setOubli((v) => !v)} aria-expanded={oubli} className="w-fit cursor-pointer text-[13px] text-sand-soft underline hover:text-sand">Première connexion ou mot de passe oublié ?</button>
+          {oubli ? (
+            <p className="rounded-lg bg-night/60 px-3.5 py-3 text-[13px] leading-relaxed text-sand-soft">
+              Connectez-vous avec votre adresse e-mail et le <b className="text-sand">mot de passe provisoire</b> remis par le responsable du site. Vous choisirez ensuite votre propre mot de passe.
+            </p>
+          ) : null}
         </form>
-        {etat.erreur && <p role="alert" className="rounded-lg border border-danger/60 bg-danger/10 px-3.5 py-2.5 text-[13.5px] text-danger">{etat.erreur}</p>}
+        {etat.erreur && <Alerte>{etat.erreur}</Alerte>}
       </Carte>
     </div>
+  );
+}
+
+/** Choix d'un nouveau mot de passe : obligatoire à la première connexion (sans l'ancien), ou depuis l'en-tête. */
+function ChangerMotDePasse({ obligatoire, email, onFait, onAnnuler }) {
+  const [f, setF] = useState({ ancien: "", nouveau: "", confirmation: "" });
+  const [etat, setEtat] = useState({ attente: false, erreur: "" });
+  const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
+
+  const valider = async (e) => {
+    e.preventDefault();
+    if (f.nouveau !== f.confirmation) return setEtat({ attente: false, erreur: MESSAGES.differents });
+    setEtat({ attente: true, erreur: "" });
+    try {
+      const r = await appel("changer-mot-de-passe", { ancien: f.ancien, nouveau: f.nouveau });
+      onFait(r);
+    } catch (err) {
+      setEtat({ attente: false, erreur: MESSAGES[err.code] || MESSAGES.base });
+    }
+  };
+
+  return (
+    <Carte className="grid w-full max-w-[440px] gap-5 p-7">
+      <EnTeteConnexion titre={obligatoire ? "Choisissez votre mot de passe" : "Changer le mot de passe"} />
+      <p className="text-[14px] text-sand-soft">
+        {obligatoire ? <>Première connexion de <b className="text-sand">{email}</b> : remplacez le mot de passe provisoire par le vôtre. Il ne sera demandé qu’à vous.</> : <>Compte <b className="text-sand">{email}</b>. Les autres appareils connectés devront se reconnecter.</>}
+      </p>
+      <form onSubmit={valider} className="grid gap-4" noValidate>
+        {!obligatoire ? <ChampMotDePasse id="mdp-ancien" label="Mot de passe actuel" autoComplete="current-password" value={f.ancien} onChange={set("ancien")} autoFocus /> : null}
+        <ChampMotDePasse id="mdp-nouveau" label="Nouveau mot de passe" autoComplete="new-password" value={f.nouveau} onChange={set("nouveau")} autoFocus={obligatoire} />
+        <ChampMotDePasse id="mdp-confirmation" label="Confirmez le nouveau mot de passe" autoComplete="new-password" value={f.confirmation} onChange={set("confirmation")} />
+        <p className="text-[12.5px] text-sand-soft">Au moins 10 caractères, avec des lettres et au moins un chiffre.</p>
+        <div className="flex flex-wrap gap-2.5">
+          <button type="submit" disabled={etat.attente} className={`${btn} flex-1 border-transparent bg-gold py-3 text-night hover:bg-gold-deep`}>{etat.attente ? "Enregistrement…" : "Enregistrer le mot de passe"}</button>
+          {onAnnuler ? <button type="button" onClick={onAnnuler} className={`${btn} border-line py-3 text-sand`}>Annuler</button> : null}
+        </div>
+      </form>
+      {etat.erreur && <Alerte>{etat.erreur}</Alerte>}
+    </Carte>
   );
 }
 
@@ -619,6 +690,8 @@ export default function Admin() {
   const [erreur, setErreur] = useState("");
   const [onglet, setOnglet] = useState("tableau");
   const [maj, setMaj] = useState(null);
+  const [email, setEmail] = useState("");
+  const [changerMdp, setChangerMdp] = useState(false);
 
   // Page privée : jamais indexée par les moteurs de recherche.
   useEffect(() => {
@@ -634,10 +707,12 @@ export default function Admin() {
       // Un raté passager (mise à jour du site, base qui se réveille) est retenté une fois sans rien afficher.
       const r = await appel("donnees").catch((err) => (err.status === 401 ? Promise.reject(err) : new Promise((ok) => setTimeout(ok, 1500)).then(() => appel("donnees"))));
       setDonnees({ demandes: r.demandes, paiements: r.paiements });
+      if (r.email) setEmail(r.email);
       setMaj(new Date());
       setEtat("pret");
     } catch (err) {
       if (err.status === 401) setEtat("connexion");
+      else if (err.code === "changer") setEtat("changer");
       else if (err.code === "non-configure") setEtat("non-configure");
       else { setErreur(MESSAGES[err.code] || MESSAGES.base); setEtat((e) => (e === "chargement" ? "erreur" : e)); }
     }
@@ -657,7 +732,15 @@ export default function Admin() {
   const paiementsChanges = (paiements) => setDonnees((s) => ({ ...s, paiements }));
 
   if (etat === "chargement") return <p className="grid min-h-screen place-items-center text-sand-soft">Chargement…</p>;
-  if (etat === "connexion") return <Connexion onConnecte={() => { setEtat("chargement"); charger(); }} />;
+  const apresConnexion = (r) => { setEmail(r.email); if (r.changer) setEtat("changer"); else { setEtat("chargement"); charger(); } };
+  if (etat === "connexion") return <Connexion onConnecte={apresConnexion} />;
+  if (etat === "changer") {
+    return (
+      <div className="grid min-h-screen place-items-center px-4 py-10">
+        <ChangerMotDePasse obligatoire email={email} onFait={() => { setEtat("chargement"); charger(); }} />
+      </div>
+    );
+  }
   if (etat === "non-configure" || etat === "erreur") {
     return (
       <div className="grid min-h-screen place-items-center px-4">
@@ -676,10 +759,11 @@ export default function Admin() {
         <div className="mx-auto flex max-w-[1180px] flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3">
           <div className="min-w-0">
             <p className="text-[15px] leading-tight font-extrabold">Camayenne Plage <span className="font-semibold text-sand-soft">· Administration</span></p>
-            <p className="text-[12px] text-sand-soft">{maj ? `À jour à ${maj.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}` : ""}</p>
+            <p className="text-[12px] text-sand-soft">{[email, maj && `à jour à ${maj.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`].filter(Boolean).join(" · ")}</p>
           </div>
           <div className="ml-auto flex gap-2">
             <button type="button" onClick={charger} className={`${btn} border-line text-sand hover:border-sand/50`}>Actualiser</button>
+            <button type="button" onClick={() => setChangerMdp(true)} className={`${btn} border-line text-sand-soft hover:text-sand`}>Mot de passe</button>
             <button type="button" onClick={deconnexion} className={`${btn} border-line text-sand-soft hover:text-sand`}>Se déconnecter</button>
           </div>
         </div>
@@ -693,6 +777,11 @@ export default function Admin() {
         </nav>
       </header>
       <main className="mx-auto max-w-[1180px] px-4 py-6">
+        {changerMdp ? (
+          <div className="mb-6 grid place-items-center">
+            <ChangerMotDePasse email={email} onFait={() => { setChangerMdp(false); setErreur(""); }} onAnnuler={() => setChangerMdp(false)} />
+          </div>
+        ) : null}
         {erreur ? <p role="alert" className="mb-4 rounded-lg border border-danger/60 bg-danger/10 px-3.5 py-2.5 text-[13.5px] text-danger">{erreur}</p> : null}
         {onglet === "tableau" && <VueTableau demandes={donnees.demandes} paiements={donnees.paiements} />}
         {onglet === "demandes" && <VueDemandes demandes={donnees.demandes} onEnregistre={remplacer} onSupprime={retirer} />}

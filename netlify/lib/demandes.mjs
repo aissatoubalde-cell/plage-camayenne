@@ -105,8 +105,9 @@ const gnf = (n) => `${Math.round(Number(n) || 0).toLocaleString("fr-FR").replace
 
 /* ---------- Journal ---------- */
 
-async function journaliser(q, action, objet, objetId, resume) {
-  await q(`insert into journal (action, objet, objet_id, resume) values ($1, $2, $3, $4)`, [action, objet, objetId, texte(resume, 400)]);
+export async function journaliser(q, action, objet, objetId, resume) {
+  const requete = q || (await base());
+  await requete(`insert into journal (action, objet, objet_id, resume) values ($1, $2, $3, $4)`, [action, objet, objetId, texte(resume, 400)]);
 }
 
 /* ---------- Lecture (dates rendues en texte : même format quel que soit le pilote) ---------- */
