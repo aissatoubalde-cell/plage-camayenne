@@ -570,7 +570,7 @@ const decalerMois = (m, n) => { const [a, mm] = m.split("-").map(Number); const 
 const fmtQuand = (iso) => new Date(iso).toLocaleString("fr-FR", { timeZone: "Africa/Conakry", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 const TON_ACTION = (a) => (/supprim|Refus/.test(a) ? "text-danger" : /reçue|déclaré/.test(a) ? "text-sky" : /Paiement|pointé/i.test(a) ? "text-palm" : "text-sand");
 
-function VueHistorique() {
+function VueHistorique({ actualisation }) {
   const actuel = new Date().toISOString().slice(0, 7);
   const [mois, setMois] = useState(actuel);
   const [h, setH] = useState(null);
@@ -583,7 +583,7 @@ function VueHistorique() {
     setErreur("");
     appel("historique", { mois }).then((r) => { if (actif) setH(r); }).catch((err) => { if (actif) setErreur(MESSAGES[err.code] || MESSAGES.base); });
     return () => { actif = false; };
-  }, [mois]);
+  }, [mois, actualisation]);
 
   const q = recherche.trim().toLowerCase();
   const journal = (h?.journal || [])
@@ -692,6 +692,7 @@ export default function Admin() {
   const [maj, setMaj] = useState(null);
   const [email, setEmail] = useState("");
   const [changerMdp, setChangerMdp] = useState(false);
+  const [enCours, setEnCours] = useState(false);
 
   // Page privée : jamais indexée par les moteurs de recherche.
   useEffect(() => {
@@ -703,6 +704,7 @@ export default function Admin() {
 
   const charger = useCallback(async () => {
     setErreur("");
+    setEnCours(true);
     try {
       // Un raté passager (mise à jour du site, base qui se réveille) est retenté une fois sans rien afficher.
       const r = await appel("donnees").catch((err) => (err.status === 401 ? Promise.reject(err) : new Promise((ok) => setTimeout(ok, 1500)).then(() => appel("donnees"))));
@@ -716,6 +718,7 @@ export default function Admin() {
       else if (err.code === "non-configure") setEtat("non-configure");
       else { setErreur(MESSAGES[err.code] || MESSAGES.base); setEtat((e) => (e === "chargement" ? "erreur" : e)); }
     }
+    setEnCours(false);
   }, []);
 
   useEffect(() => { charger(); }, [charger]);
@@ -762,7 +765,9 @@ export default function Admin() {
             <p className="text-[12px] text-sand-soft">{[email, maj && `à jour à ${maj.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`].filter(Boolean).join(" · ")}</p>
           </div>
           <div className="ml-auto flex gap-2">
-            <button type="button" onClick={charger} className={`${btn} border-line text-sand hover:border-sand/50`}>Actualiser</button>
+            <button type="button" onClick={charger} disabled={enCours} className={`${btn} border-line text-sand hover:border-sand/50`}>
+              <Icon name="refresh" className={`h-4 w-4 ${enCours ? "animate-spin" : ""}`} />{enCours ? "Actualisation…" : "Actualiser"}
+            </button>
             <button type="button" onClick={() => setChangerMdp(true)} className={`${btn} border-line text-sand-soft hover:text-sand`}>Mot de passe</button>
             <button type="button" onClick={deconnexion} className={`${btn} border-line text-sand-soft hover:text-sand`}>Se déconnecter</button>
           </div>
@@ -786,7 +791,7 @@ export default function Admin() {
         {onglet === "tableau" && <VueTableau demandes={donnees.demandes} paiements={donnees.paiements} />}
         {onglet === "demandes" && <VueDemandes demandes={donnees.demandes} onEnregistre={remplacer} onSupprime={retirer} />}
         {onglet === "paiements" && <VuePaiements demandes={donnees.demandes} paiements={donnees.paiements} onChange={paiementsChanges} />}
-        {onglet === "historique" && <VueHistorique />}
+        {onglet === "historique" && <VueHistorique actualisation={maj} />}
       </main>
     </div>
   );
