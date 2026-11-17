@@ -100,6 +100,7 @@ Copiez `.env.example` en `.env` (jamais versionné). Sur Netlify : *Site configu
 | `CINETPAY_API_KEY`, `CINETPAY_API_PASSWORD` | paiement en ligne (Orange Money, MTN) : clé `sk_live_…` et mot de passe API | tableau de bord marchand CinetPay (panel.cinetpay.net) ; une clé `sk_test_…` bascule sur le bac à sable |
 | `CINETPAY_CARD` | `1` pour afficher l’option Carte bancaire, uniquement si CinetPay l’a activée sur le compte | à demander au commercial CinetPay |
 | `VITE_ORANGE_MONEY_NUMBER` | numéro qui reçoit les acomptes Orange Money en mode manuel, tant que CinetPay n’est pas configuré | numéro Orange Money de l’entreprise, ex. `+224 620 613 554` |
+| `VITE_SILYLINK_URL` | lien de paiement Sily Link (Orange Money, MTN) : option « en ligne » proposée en premier tant que CinetPay n’est pas configuré | tableau de bord Sily Link → *Liens de paiement* : lien standard, montant libre, coordonnées du client demandées, redirection vers `https://www.camayenneplage.com/confirmation` |
 | `SITE_URL` | URL publique pour les retours de paiement | identique à `VITE_SITE_URL` |
 | `WEB3FORMS_KEY` | e-mail « Acompte reçu » à l’équipe (facultatif) | même clé Web3Forms |
 
