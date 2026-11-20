@@ -12,7 +12,7 @@ const methodCls = "grid cursor-pointer grid-cols-[auto_1fr] items-center gap-x-3
 
 const steps = [
   ["Devis validé", "Vous avez reçu votre devis et confirmé la réservation avec notre équipe."],
-  ["Acompte", "Vous réglez le montant indiqué sur le devis, par Orange Money ou carte bancaire."],
+  ["Acompte", "Vous réglez le montant indiqué sur le devis, par Mobile Money, depuis votre téléphone."],
   ["Confirmation", "Notre équipe vérifie le paiement et vous confirme la réservation."],
 ];
 
@@ -21,7 +21,7 @@ export default function Paiement() {
   useTitle("Payer un acompte · Camayenne Plage");
   const [params] = useSearchParams();
   const [conf, setConf] = useState(undefined); // undefined = chargement, {} = indisponible
-  const [method, setMethod] = useState("om"); // om = Orange Money, card = carte bancaire (tous deux via CinetPay)
+  const [method, setMethod] = useState("om"); // sily = en ligne (Sily Link), om = Orange Money (CinetPay ou transfert manuel). La carte bancaire n'est plus proposée.
   const [f, setF] = useState({ name: "", email: "", phone: "", reference: "", amount: "", transaction: "" });
   const [state, setState] = useState({ kind: params.get("annule") ? "cancel" : "idle" });
   const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
@@ -38,7 +38,6 @@ export default function Paiement() {
   const sily = Boolean(conf?.silylink);
   const choix = method === "sily" && !sily ? "om" : method;
   const enLigne = choix === "sily";
-  const card = choix === "card";
   // Sans clés CinetPay, Orange Money reste actif en mode manuel : transfert vers notre numéro puis confirmation WhatsApp.
   const manual = choix === "om" && conf && !conf.cinetpay;
   useEffect(() => {
@@ -81,7 +80,7 @@ export default function Paiement() {
     try {
       const res = await fetch(`${site.paymentApi}/${enLigne ? "paiement-silylink" : "paiement-cinetpay"}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...f, amount, channel: card ? "card" : "mobile" }),
+        body: JSON.stringify({ ...f, amount, channel: "mobile" }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || "Paiement indisponible pour le moment.");
@@ -100,7 +99,7 @@ export default function Paiement() {
             <div className="mb-[clamp(36px,5vw,60px)] grid gap-[18px]">
               <AnimatedEyebrow inView={false}>Paiement en ligne</AnimatedEyebrow>
               <SplitWords as="h1" inView={false} delay={0.2} text="Payer *un acompte*." className="text-[clamp(34px,5vw,58px)] leading-[1.02] font-extrabold tracking-[-0.025em]" />
-              <p className="max-w-[58ch] text-[clamp(17px,1.6vw,19px)] text-sand-soft">Votre devis est validé ? Réglez l’acompte en quelques minutes, par Orange Money ou par carte, et votre date est bloquée.</p>
+              <p className="max-w-[58ch] text-[clamp(17px,1.6vw,19px)] text-sand-soft">Votre devis est validé ? Réglez l’acompte en quelques minutes, par Mobile Money depuis votre téléphone, et votre date est bloquée.</p>
             </div>
             <ol className="border-t border-line">
               {steps.map(([t, d], i) => (
@@ -119,9 +118,9 @@ export default function Paiement() {
               <form onSubmit={submit} className="grid gap-[18px] border border-line bg-card p-[clamp(22px,3vw,34px)]">
                 <fieldset className="grid gap-[9px] border-0 p-0">
                   <legend className={`${labelCls} mb-[9px]`}>Moyen de paiement</legend>
-                  <div className="grid gap-2.5 md:grid-cols-2">
+                  <div className={`grid gap-2.5 ${sily ? "md:grid-cols-2" : ""}`}>
                     {sily && (
-                      <label className={`${methodCls} md:col-span-2`}>
+                      <label className={methodCls}>
                         <input type="radio" name="method" value="sily" checked={enLigne} onChange={() => setMethod("sily")} className="row-span-2 accent-gold" />
                         <b className="text-[15px]">Orange Money ou MTN · en ligne</b>
                         <small className="text-[13px] text-sand-soft">Paiement sécurisé via Sily Link, validé sur votre téléphone</small>
@@ -131,11 +130,6 @@ export default function Paiement() {
                       <input type="radio" name="method" value="om" checked={choix === "om"} onChange={() => setMethod("om")} className="row-span-2 accent-gold" />
                       <b className="text-[15px]">{sily ? "Transfert Orange Money" : "Orange Money"}</b>
                       <small className="text-[13px] text-sand-soft">{conf.cinetpay ? "Paiement sécurisé via CinetPay" : "Transfert, puis n° de transaction du SMS"}</small>
-                    </label>
-                    <label className={methodCls}>
-                      <input type="radio" name="method" value="card" checked={card} disabled={!conf.card} onChange={() => setMethod("card")} className="row-span-2 accent-gold" />
-                      <b className="text-[15px]">Carte bancaire</b>
-                      <small className="text-[13px] text-sand-soft">{conf.card ? "Visa, Mastercard · paiement sécurisé" : "Bientôt disponible"}</small>
                     </label>
                   </div>
                 </fieldset>
@@ -156,7 +150,7 @@ export default function Paiement() {
                   <Field id="p-email" label="E-mail" hint="Votre reçu y est envoyé."><input id="p-email" type="email" autoComplete="email" required value={f.email} onChange={set("email")} className={inputCls} /></Field>
                 </div>
                 <div className="grid gap-3.5 md:grid-cols-2">
-                  <Field id="p-tel" label="Téléphone"><input id="p-tel" type="tel" inputMode="tel" autoComplete="tel" required={manual || enLigne} placeholder={card ? "+224 6xx xx xx xx" : enLigne ? "Numéro Orange Money ou MTN" : "Numéro Orange Money"} value={f.phone} onChange={set("phone")} className={inputCls} /></Field>
+                  <Field id="p-tel" label="Téléphone"><input id="p-tel" type="tel" inputMode="tel" autoComplete="tel" required={manual || enLigne} placeholder={enLigne ? "Numéro Orange Money ou MTN" : "Numéro Orange Money"} value={f.phone} onChange={set("phone")} className={inputCls} /></Field>
                   <Field id="p-ref" label="Référence du devis"><input id="p-ref" placeholder="Indiquée sur votre devis" value={f.reference} onChange={set("reference")} className={inputCls} /></Field>
                 </div>
                 <Field id="p-montant" label="Montant de l’acompte (GNF)" hint={`Montant indiqué sur votre devis validé (minimum ${fmt(MIN_GNF)} GNF).`}>
@@ -197,7 +191,7 @@ export default function Paiement() {
                   <Button type="submit" disabled={state.kind === "sending" || state.kind === "manual-ok"}>{manual ? (state.kind === "sending" ? "Envoi…" : "Envoyer ma confirmation") : state.kind === "sending" ? "Paiement en cours…" : `Payer ${amount > 0 ? `${fmt(amount)} GNF` : "l’acompte"}`}</Button>
                 </div>
                 {enLigne && <p className="text-[13.5px] text-sand-soft">Vous êtes redirigé vers la page de paiement sécurisée de Sily Link, où vous validez le paiement sur votre téléphone. Votre code secret n’est jamais saisi sur notre site.{conf.silylinkTest ? " (Mode test : aucun débit réel.)" : ""}</p>}
-                {!manual && !enLigne && <p className="text-[13.5px] text-sand-soft">Vous êtes redirigé vers la page de paiement sécurisée de CinetPay{card ? ", où vous saisissez votre carte" : ", où vous validez le paiement sur votre téléphone"}. Aucune donnée bancaire ne transite par notre site.</p>}
+                {!manual && !enLigne && <p className="text-[13.5px] text-sand-soft">Vous êtes redirigé vers la page de paiement sécurisée de CinetPay, où vous validez le paiement sur votre téléphone. Aucune donnée bancaire ne transite par notre site.</p>}
               </form>
             )}
           </div>
