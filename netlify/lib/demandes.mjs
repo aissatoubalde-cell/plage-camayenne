@@ -2,6 +2,7 @@
 // (Neon, rattachée au projet Vercel). Utilisé par :
 // - netlify/functions/demande.mjs (formulaire « Demander un devis » du site),
 // - netlify/functions/paiement-declare.mjs (acompte Orange Money déclaré sur la page Paiement, mode manuel),
+// - netlify/functions/paiement-silylink*.mjs et paiement-statut.mjs (acomptes payés en ligne via Sily Link),
 // - netlify/functions/admin.mjs (page /admin).
 //
 // Variable : DATABASE_URL (créée par l'intégration Neon de Vercel ; POSTGRES_URL accepté aussi).
@@ -9,7 +10,7 @@
 // Rien n'est jamais effacé automatiquement : le tableau de bord montre le mois en cours, l'historique tous les mois.
 
 export const STATUTS = ["Nouvelle", "Contacté", "Devis envoyé", "Acompte reçu", "Confirmé", "Annulé"];
-export const MOYENS = ["Orange Money", "Carte bancaire", "Espèces", "Virement"];
+export const MOYENS = ["Orange Money", "MTN MoMo", "Carte bancaire", "Espèces", "Virement"];
 export const STATUTS_PAIEMENT = ["Confirmé", "En attente", "Refusé", "Remboursé"];
 
 export const urlBase = () => (process.env.DATABASE_URL || process.env.POSTGRES_URL || "").trim();
@@ -67,6 +68,13 @@ const SCHEMA = [
     action text not null, objet text not null, objet_id integer, resume text not null
   )`,
   `create index if not exists journal_quand on journal (quand)`,
+  // Paiements en ligne commencés (Sily Link) : le paiement n'entre dans « paiements » qu'une fois confirmé.
+  `create table if not exists paiements_en_ligne (
+    reference_site text primary key,
+    cree timestamptz not null default now(),
+    prestataire text not null, operation text, client text, email text, telephone text, reference text,
+    montant bigint not null, statut text not null default 'en cours', paiement_id integer
+  )`,
   `create table if not exists tentatives (ip text not null, quand timestamptz not null default now())`,
 ];
 
@@ -290,6 +298,64 @@ export async function declarerPaiement(d) {
     [nom, texte(d.reference, 60), montant, telephone, email, transaction]);
   await journaliser(q, "Paiement déclaré sur le site", "paiement", id, `${nom} · ${gnf(montant)} · Orange Money · transaction ${transaction} · à vérifier`);
   return { ok: true };
+}
+
+/* ---------- Paiements en ligne (Sily Link) ---------- */
+
+/** Note un paiement en ligne qui commence (avant la redirection vers la page du prestataire). */
+export async function commencerPaiementEnLigne(p) {
+  const q = await base();
+  const [{ n }] = await q(`select count(*)::int as n from paiements_en_ligne where cree > now() - interval '1 hour'`);
+  if (n >= 60) return { erreur: "limite" };
+  await q(
+    `insert into paiements_en_ligne (reference_site, prestataire, client, email, telephone, reference, montant)
+     values ($1, $2, $3, $4, $5, $6, $7)`,
+    [p.orderId, p.prestataire, texte(p.name, 120), texte(p.email, 160), texte(p.phone, 30), texte(p.reference, 60), p.amount]);
+  return { ok: true };
+}
+
+export async function noterOperation(orderId, operation) {
+  const q = await base();
+  await q(`update paiements_en_ligne set operation = $1 where reference_site = $2`, [texte(operation, 80), orderId]);
+}
+
+/**
+ * Résultat vérifié auprès du prestataire. Un paiement confirmé entre une seule fois dans « paiements »
+ * (statut Confirmé, origine 'en-ligne'), même si la notification arrive plusieurs fois.
+ * `r` : { orderId, status: paid|failed|pending, amount, moyen, operationId }.
+ */
+export async function resultatPaiementEnLigne(r) {
+  const q = await base();
+  const [ligne] = await q(`select * from paiements_en_ligne where reference_site = $1`, [r.orderId]);
+  if (!ligne) return { erreur: "introuvable" };
+  if (r.status === "failed" && !ligne.paiement_id) {
+    await q(`update paiements_en_ligne set statut = 'échoué' where reference_site = $1`, [r.orderId]);
+    return { ok: true };
+  }
+  if (r.status !== "paid") return { ok: true };
+  const attendu = Number(ligne.montant);
+  const montant = r.amount || attendu;
+  const ecart = r.amount && r.amount !== attendu;
+  // Réservation de la ligne : une seule notification gagne, les suivantes ne font rien.
+  const pris = await q(
+    `update paiements_en_ligne set statut = 'payé', operation = coalesce(operation, $2), paiement_id = -1
+     where reference_site = $1 and paiement_id is null returning reference_site`, [r.orderId, texte(r.operationId, 80) || null]);
+  if (!pris.length) return { ok: true, deja: true };
+  const notes = `Payé en ligne via Sily Link${r.operationId ? ` (opération ${r.operationId})` : ""}${ecart ? ` · montant annoncé ${gnf(attendu)}, reçu ${gnf(montant)} : à vérifier` : ""}`;
+  let id;
+  try {
+    [{ id }] = await q(
+      `insert into paiements (date, client, reference, montant, moyen, statut, pointe, notes, telephone, email, transaction, origine)
+       values ((now() at time zone 'UTC')::date, $1, $2, $3, $4, $5, false, $6, $7, $8, $9, 'en-ligne') returning id`,
+      [ligne.client, ligne.reference, montant, r.moyen, ecart ? "En attente" : "Confirmé", notes, ligne.telephone, ligne.email, r.orderId]);
+  } catch (e) {
+    // Échec d'écriture : on libère la ligne pour que la notification suivante (ou la page de confirmation) réessaie.
+    await q(`update paiements_en_ligne set paiement_id = null where reference_site = $1`, [r.orderId]).catch(() => {});
+    throw e;
+  }
+  await q(`update paiements_en_ligne set paiement_id = $1 where reference_site = $2`, [id, r.orderId]);
+  await journaliser(q, "Paiement reçu en ligne", "paiement", id, `${ligne.client} · ${gnf(montant)} · ${r.moyen} · réf. ${r.orderId}${ecart ? " · montant différent, à vérifier" : ""}`);
+  return { ok: true, nouveau: true };
 }
 
 export async function modifierPaiement(d) {

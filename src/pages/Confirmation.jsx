@@ -7,7 +7,7 @@ import { useTitle } from "../hooks";
 const fmt = (n) => new Intl.NumberFormat("fr-FR").format(n);
 const T = {
   loading: { eyebrow: "Paiement", title: "Vérification de votre paiement…", body: "Un instant, nous interrogeons le prestataire de paiement.", tone: "" },
-  paid: { eyebrow: "Paiement reçu", title: "Merci, votre acompte est enregistré.", body: "Un reçu vous est envoyé par e-mail. Notre équipe vous confirme la réservation très rapidement.", tone: "ok" },
+  paid: { eyebrow: "Paiement reçu", title: "Merci, votre acompte est enregistré.", body: "Votre paiement nous est bien parvenu. Notre équipe vous confirme la réservation très rapidement.", tone: "ok" },
   pending: { eyebrow: "Paiement en cours", title: "Nous attendons la confirmation.", body: "Si vous avez validé le paiement sur votre téléphone, la confirmation arrive dans quelques instants. Vous pouvez recharger cette page.", tone: "" },
   failed: { eyebrow: "Paiement non abouti", title: "Le paiement n’a pas été accepté.", body: "Aucun montant n’a été débité. Vous pouvez réessayer ou nous contacter pour régler autrement.", tone: "err" },
   unknown: { eyebrow: "Paiement", title: "Merci pour votre règlement.", body: "Nous vérifions votre paiement et revenons vers vous par e-mail ou par téléphone.", tone: "" },

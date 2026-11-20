@@ -34,8 +34,8 @@ export default function Paiement() {
   }, []);
 
   const amount = Number(f.amount);
-  // Lien Sily Link (Orange Money, MTN) : proposé en premier tant que CinetPay n'est pas configuré.
-  const sily = Boolean(site.silylink && conf && !conf.cinetpay);
+  // Paiement en ligne Sily Link (Orange Money, MTN MoMo) : proposé en premier dès que les clés sont dans Vercel.
+  const sily = Boolean(conf?.silylink);
   const choix = method === "sily" && !sily ? "om" : method;
   const enLigne = choix === "sily";
   const card = choix === "card";
@@ -58,7 +58,6 @@ export default function Paiement() {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (enLigne) return window.location.assign(site.silylink); // page Sily Link, puis retour sur /confirmation
     if (manual) {
       // Le paiement déclaré est enregistré pour l'équipe (page /admin, à vérifier) ; WhatsApp reste possible en plus.
       setState({ kind: "sending" });
@@ -80,14 +79,14 @@ export default function Paiement() {
     }
     setState({ kind: "sending" });
     try {
-      const res = await fetch(`${site.paymentApi}/paiement-cinetpay`, {
+      const res = await fetch(`${site.paymentApi}/${enLigne ? "paiement-silylink" : "paiement-cinetpay"}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...f, amount, channel: card ? "card" : "mobile" }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || "Paiement indisponible pour le moment.");
       if (!json.url) throw new Error("Paiement indisponible pour le moment.");
-      window.location.assign(json.url); // page de paiement CinetPay, puis retour sur /confirmation
+      window.location.assign(json.url); // page de paiement Sily Link ou CinetPay, puis retour sur /confirmation
     } catch (err) {
       setState({ kind: "err", text: err.message });
     }
@@ -145,26 +144,24 @@ export default function Paiement() {
                   <div className="grid gap-2 border border-gold/40 bg-night p-4 text-[14px] text-sand-soft">
                     <b className="text-sand">Comment payer en ligne</b>
                     <ol className="grid list-decimal gap-1 pl-5">
-                      <li>Cliquez sur « Payer en ligne » : la page de paiement sécurisée Sily Link s’ouvre.</li>
-                      <li>Indiquez le montant de l’acompte figurant sur votre devis, vos coordonnées, puis choisissez Orange Money ou MTN Mobile Money.</li>
-                      <li>Validez le paiement sur votre téléphone. Notre équipe vous confirme la réservation.</li>
+                      <li>Remplissez le formulaire ci-dessous avec le montant indiqué sur votre devis, puis cliquez sur « Payer ».</li>
+                      <li>Sur la page sécurisée Sily Link, choisissez Orange Money ou MTN Mobile Money.</li>
+                      <li>Validez le paiement sur votre téléphone avec votre code secret. Le paiement nous parvient directement et votre réservation est confirmée.</li>
                     </ol>
                   </div>
                 )}
 
-                {!enLigne && <>
                 <div className="grid gap-3.5 md:grid-cols-2">
                   <Field id="p-nom" label="Nom et prénom"><input id="p-nom" autoComplete="name" required minLength={2} value={f.name} onChange={set("name")} className={inputCls} /></Field>
                   <Field id="p-email" label="E-mail" hint="Votre reçu y est envoyé."><input id="p-email" type="email" autoComplete="email" required value={f.email} onChange={set("email")} className={inputCls} /></Field>
                 </div>
                 <div className="grid gap-3.5 md:grid-cols-2">
-                  <Field id="p-tel" label="Téléphone"><input id="p-tel" type="tel" inputMode="tel" autoComplete="tel" required={manual} placeholder={card ? "+224 6xx xx xx xx" : "Numéro Orange Money"} value={f.phone} onChange={set("phone")} className={inputCls} /></Field>
+                  <Field id="p-tel" label="Téléphone"><input id="p-tel" type="tel" inputMode="tel" autoComplete="tel" required={manual || enLigne} placeholder={card ? "+224 6xx xx xx xx" : enLigne ? "Numéro Orange Money ou MTN" : "Numéro Orange Money"} value={f.phone} onChange={set("phone")} className={inputCls} /></Field>
                   <Field id="p-ref" label="Référence du devis"><input id="p-ref" placeholder="Indiquée sur votre devis" value={f.reference} onChange={set("reference")} className={inputCls} /></Field>
                 </div>
                 <Field id="p-montant" label="Montant de l’acompte (GNF)" hint={`Montant indiqué sur votre devis validé (minimum ${fmt(MIN_GNF)} GNF).`}>
                   <input id="p-montant" type="number" inputMode="numeric" required min={MIN_GNF} step={1} placeholder={`Ex. ${fmt(500000)}`} value={f.amount} onChange={set("amount")} className={`${inputCls} tabular-nums`} />
                 </Field>
-                </>}
 
                 {manual && (
                   <Field id="p-transaction" label="N° de transaction Orange Money" hint="Il figure dans le SMS de confirmation Orange Money reçu après l’envoi.">
@@ -197,9 +194,9 @@ export default function Paiement() {
                 {state.kind === "manual-sent" && <Status kind="ok">Merci ! Envoyez le message WhatsApp qui vient de s’ouvrir avec la capture du SMS Orange Money. Notre équipe vous confirme la réservation.</Status>}
                 {state.kind === "err" && <Status kind="err">{state.text}</Status>}
                 <div className="flex flex-wrap gap-2.5">
-                  <Button type="submit" disabled={state.kind === "sending" || state.kind === "manual-ok"}>{enLigne ? "Payer en ligne" : manual ? (state.kind === "sending" ? "Envoi…" : "Envoyer ma confirmation") : state.kind === "sending" ? "Paiement en cours…" : `Payer ${amount > 0 ? `${fmt(amount)} GNF` : "l’acompte"}`}</Button>
+                  <Button type="submit" disabled={state.kind === "sending" || state.kind === "manual-ok"}>{manual ? (state.kind === "sending" ? "Envoi…" : "Envoyer ma confirmation") : state.kind === "sending" ? "Paiement en cours…" : `Payer ${amount > 0 ? `${fmt(amount)} GNF` : "l’acompte"}`}</Button>
                 </div>
-                {enLigne && <p className="text-[13.5px] text-sand-soft">Le paiement se fait sur la page sécurisée de Sily Link. Aucune donnée bancaire ne transite par notre site.</p>}
+                {enLigne && <p className="text-[13.5px] text-sand-soft">Vous êtes redirigé vers la page de paiement sécurisée de Sily Link, où vous validez le paiement sur votre téléphone. Votre code secret n’est jamais saisi sur notre site.{conf.silylinkTest ? " (Mode test : aucun débit réel.)" : ""}</p>}
                 {!manual && !enLigne && <p className="text-[13.5px] text-sand-soft">Vous êtes redirigé vers la page de paiement sécurisée de CinetPay{card ? ", où vous saisissez votre carte" : ", où vous validez le paiement sur votre téléphone"}. Aucune donnée bancaire ne transite par notre site.</p>}
               </form>
             )}

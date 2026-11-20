@@ -13,7 +13,7 @@ import { useTitle } from "../hooks";
 
 const API = "/api/admin";
 const STATUTS = ["Nouvelle", "Contacté", "Devis envoyé", "Acompte reçu", "Confirmé", "Annulé"];
-const MOYENS = ["Orange Money", "Carte bancaire", "Espèces", "Virement"];
+const MOYENS = ["Orange Money", "MTN MoMo", "Carte bancaire", "Espèces", "Virement"];
 const STATUTS_PAIEMENT = ["Confirmé", "En attente", "Refusé", "Remboursé"];
 const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 const MOIS_LONGS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
@@ -545,7 +545,7 @@ function VuePaiements({ demandes, paiements, onChange }) {
           <tbody>
             {paiements.length ? paiements.map((p) => (
               <tr key={p.id} className={`border-b border-line last:border-b-0 ${p.statut === "En attente" ? "bg-[#f0c766]/[0.06]" : ""}`}>
-                <td className="px-4 py-3 align-top whitespace-nowrap">{fmtJour(p.date)}{p.origine === "site" ? <span className="mt-1 block w-fit rounded-full bg-sky/15 px-2 py-0.5 text-[11px] font-semibold text-sky">Déclaré sur le site</span> : null}</td>
+                <td className="px-4 py-3 align-top whitespace-nowrap">{fmtJour(p.date)}{p.origine === "site" ? <span className="mt-1 block w-fit rounded-full bg-sky/15 px-2 py-0.5 text-[11px] font-semibold text-sky">Déclaré sur le site</span> : p.origine === "en-ligne" ? <span className="mt-1 block w-fit rounded-full bg-palm/15 px-2 py-0.5 text-[11px] font-semibold text-palm">Payé en ligne</span> : null}</td>
                 <td className="px-4 py-3 align-top">{p.client}<span className="block text-[12px] text-sand-soft">{[p.telephone, p.email].filter(Boolean).join(" · ")}</span>{p.notes ? <span className="block text-[12px] text-sand-soft">{p.notes}</span> : null}</td>
                 <td className="px-4 py-3 align-top">{p.reference || <span className="text-sand-soft">—</span>}{p.transaction ? <span className="block font-mono text-[12px] text-sand-soft">{p.transaction}</span> : null}</td>
                 <td className="px-4 py-3 text-right align-top whitespace-nowrap">{gnf(p.montant)}</td>
@@ -558,7 +558,7 @@ function VuePaiements({ demandes, paiements, onChange }) {
           </tbody>
         </table>
       </Carte>
-      <p className="text-[13px] text-sand-soft">Seuls les paiements au statut « Confirmé » comptent dans les totaux. « Pointé » : cochez une fois le paiement retrouvé dans CinetPay ou sur le relevé Orange Money.</p>
+      <p className="text-[13px] text-sand-soft">Seuls les paiements au statut « Confirmé » comptent dans les totaux. « Pointé » : cochez une fois le paiement retrouvé dans Sily Link ou sur le relevé Orange Money. « Payé en ligne » : confirmé automatiquement par Sily Link.</p>
     </div>
   );
 }

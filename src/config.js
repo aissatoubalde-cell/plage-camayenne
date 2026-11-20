@@ -16,8 +16,6 @@ export const site = {
   },
   // Numéro qui reçoit les acomptes Orange Money quand CinetPay n’est pas configuré.
   orangeMoney: import.meta.env.VITE_ORANGE_MONEY_NUMBER || "+224 620 613 554",
-  // Lien de paiement Sily Link (Orange Money, MTN MoMo). Vide : l’option « En ligne » n’apparaît pas.
-  silylink: /^https:\/\//.test(import.meta.env.VITE_SILYLINK_URL || "") ? import.meta.env.VITE_SILYLINK_URL.trim() : "",
   web3formsKey: import.meta.env.VITE_WEB3FORMS_KEY || "",
   plausibleDomain: import.meta.env.VITE_PLAUSIBLE_DOMAIN || "",
   paymentApi: "/api",
